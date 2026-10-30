@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Distribution graph — variations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf9f5;
+    --ink: #1f1e1d;
+    --muted: #87867f;
+    --line: #e8e6dc;
+    --good: #5f7d4e;
+    --fine: #a08a4a;
+    --bad: #b5533c;
+    --hl: #ffe14d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Newsreader", Georgia, serif;
+    font-size: 19px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1240px; margin: 0 auto; padding: 72px 20px 120px; }
+  h1 { font-weight: 400; font-size: 34px; margin: 0 0 8px; }
+  .lede { color: var(--muted); font-size: 17px; max-width: 620px; margin: 0 0 24px; }
+  .toc { font-size: 16px; color: var(--muted); margin: 0 0 24px; }
+  .toc a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--line); margin-right: 14px; }
+  .legend { font-size: 15px; color: var(--muted); margin-bottom: 40px; }
+  .legend span { margin-right: 14px; }
+  .legend .good { color: var(--good); } .legend .fine { color: var(--fine); } .legend .bad { color: var(--bad); }
+
+  section.variation { border-top: 1px solid var(--line); padding-top: 32px; margin-top: 64px; }
+  section.variation h2 { font-weight: 400; font-size: 26px; margin: 0 0 4px; }
+  section.variation h2 .letter { color: var(--muted); margin-right: 10px; }
+  section.variation p.what { color: var(--muted); font-size: 17px; font-style: italic; margin: 0 0 24px; max-width: 760px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 56px; row-gap: 8px; }
+  .colhead { font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+  .cell { padding: 22px 0 26px; border-bottom: 1px solid var(--line); min-width: 0; }
+  .cell .title { font-size: 21px; line-height: 1.25; }
+  .cell .row { display: flex; align-items: baseline; gap: 14px; margin-top: 6px; }
+  .avg-score { font-size: 48px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .avg-score.good { color: var(--good); } .avg-score.fine { color: var(--fine); } .avg-score.bad { color: var(--bad); }
+  .cell .n { color: var(--muted); font-size: 16px; }
+  .cell svg { display: block; width: 100%; height: auto; margin-top: 18px; overflow: visible; }
+  svg text { font-family: "Newsreader", Georgia, serif; font-variant-numeric: tabular-nums; }
+
+  .verdict { max-width: 760px; margin-top: 88px; border-top: 1px solid var(--line); padding-top: 32px; font-size: 18px; }
+  .verdict h2 { font-weight: 400; font-size: 26px; margin: 0 0 8px; }
+
+  @media (max-width: 860px) {
+    .grid { grid-template-columns: 1fr; }
+    .colhead:nth-child(2) { display: none; }
+    main { padding: 40px 16px 80px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Distribution graph — variations</h1>
+  <p class="lede">Eight treatments of the score distribution on an experience page. Each is shown against a consensus, a divisive and a sparse experience, in the current theme and a highlighter-accent experiment.</p>
+  <div class="toc" id="toc"></div>
+  <div class="legend">Valence: <span class="good">good ≥ 6.7</span><span class="fine">fine 3.4–6.6</span><span class="bad">bad &lt; 3.4</span></div>
+  <div id="variations"></div>
+
+  <div class="verdict" id="verdict">
+    <h2>Notes</h2>
+    <p>The highlighter works best when it marks <em>one</em> thing: the viewer's own position. It gets noisy when it also has to compete with valence colors in the same spot. Each Highlighter cell marks the viewer once, plus a wash on their band or column where the variation has one.</p>
+  </div>
+</main>
+
+<script>
+"use strict";
+
+/* ---------- deterministic data ---------- */
+function rng(seed) {
+  return function () {
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function normal(r, m, s) {
+  const u = 1 - r(), v = r();
+  return m + s * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+const clampR = (v, lo, hi) => Math.round(Math.min(hi, Math.max(lo, v)) * 10) / 10;
+
+function makeDatasets() {
+  const consensus = [{ v: 9.6, you: true }];
+  { const r = rng(7); for (let i = 0; i < 40; i++) consensus.push({ v: clampR(normal(r, 9.3, 0.45), 8.5, 10), you: false }); }
+
+  const divisive = [{ v: 8.1, you: true }];
+  { const r = rng(21);
+    for (let i = 0; i < 25; i++) divisive.push({ v: clampR(normal(r, 2.75, 0.4), 2, 3.5), you: false });
+    for (let i = 0; i < 35; i++) divisive.push({ v: clampR(normal(r, 8.5, 0.5), 7.5, 9.5), you: false });
+    for (let i = 0; i < 2; i++) divisive.push({ v: clampR(normal(r, 5.4, 0.7), 4, 6.5), you: false }); }
+
+  const sparse = [{ v: 9.6, you: true }, { v: 7.0, you: false }];
+
+  const sets = [
+    { key: "consensus", title: "Getting engaged", scores: consensus, n: 41 },
+    { key: "divisive", title: "Getting a tattoo", scores: divisive, n: 63 },
+    { key: "sparse", title: "Reading East of Eden", scores: sparse, n: 2 },
+  ];
+  for (const d of sets) {
+    if (d.scores.length !== d.n) throw new Error(`${d.key}: expected ${d.n} scores, got ${d.scores.length}`);
+    const yous = d.scores.filter((s) => s.you);
+    if (yous.length !== 1) throw new Error(`${d.key}: expected exactly one viewer score`);
+    d.you = yous[0];
+    d.mean = d.scores.reduce((a, s) => a + s.v, 0) / d.n;
+  }
+  return sets;
+}
+
+/* ---------- drawing primitives ---------- */
+const W = 460, L = 26, R = W - 32;
+const X = (s) => L + (s / 10) * (R - L);
+const C = { ink: "#1f1e1d", muted: "#87867f", line: "#e8e6dc", dot: "#c9c7be", good: "#5f7d4e", fine: "#a08a4a", bad: "#b5533c", hl: "#ffe14d" };
+const BANDS = [["bad", 0, 3.35], ["fine", 3.35, 6.65], ["good", 6.65, 10]];
+const band = (s) => (s >= 6.65 ? "good" : s >= 3.35 ? "fine" : "bad");
+const bandOf = (name) => BANDS.find((b) => b[0] === name);
+const f = (n) => n.toFixed(2);
+
+function axisEnds(y) {
+  return `<text x="${L - 12}" y="${y + 4}" font-size="12" fill="${C.muted}" text-anchor="middle">0</text>` +
+         `<text x="${R + 19}" y="${y + 4}" font-size="12" fill="${C.muted}" text-anchor="middle">10</text>`;
+}
+function axis(y) {
+  return `<line x1="${L}" y1="${y}" x2="${R}" y2="${y}" stroke="${C.line}" stroke-width="1"/>` + axisEnds(y);
+}
+
+/* An irregular marker stroke: a slightly wobbly rounded bar, optionally rotated. */
+function swipe(cx, cy, len, thick, seed, opacity = 0.9, angle = -2) {
+  const r = rng(seed * 977 + 13);
+  const x0 = cx - len / 2, x1 = cx + len / 2, t = cy - thick / 2, b = cy + thick / 2;
+  const n = Math.max(3, Math.round(len / 10));
+  const j = Math.min(1.6, thick * 0.12);
+  let d = `M${f(x0 + 1)},${f(t)}`;
+  for (let i = 1; i <= n; i++) d += ` L${f(x0 + (len * i) / n)},${f(t + (r() - 0.5) * 2 * j)}`;
+  d += ` Q${f(x1 + Math.min(4, thick * 0.4))},${f(cy + (r() - 0.5) * j)} ${f(x1 - 1)},${f(b + (r() - 0.5) * j)}`;
+  for (let i = n - 1; i >= 0; i--) d += ` L${f(x0 + (len * i) / n)},${f(b + (r() - 0.5) * 2 * j)}`;
+  d += ` Q${f(x0 - Math.min(4, thick * 0.4))},${f(cy)} ${f(x0 + 1)},${f(t)} Z`;
+  return `<path d="${d}" fill="${C.hl}" opacity="${opacity}" transform="rotate(${angle} ${f(cx)} ${f(cy)})" style="mix-blend-mode:multiply"/>`;
+}
+const vswipe = (cx, yTop, yBot, thick, seed, opacity = 0.9) =>
+  swipe(cx, (yTop + yBot) / 2, yBot - yTop, thick, seed, opacity, -88.5);
+
+function bandWash(name, yTop, yBot, seed, opacity = 0.42) {
+  const [, lo, hi] = bandOf(name);
+  const x0 = Math.max(L - 4, X(lo)), x1 = Math.min(R + 4, X(hi));
+  return swipe((x0 + x1) / 2, (yTop + yBot) / 2, x1 - x0, yBot - yTop, seed, opacity, -0.6);
+}
+
+/* "you" label under (or above) a point. Highlighter theme puts a marker stroke behind it. */
+function youLabel(x, y, th, seed = 3) {
+  const cx = Math.min(R + 6, Math.max(L - 6, x));
+  const bg = th === "hl" ? swipe(cx, y - 4, 30, 14, seed, 0.95) : "";
+  return bg + `<text x="${f(cx)}" y="${y}" font-size="12" fill="${C.ink}" text-anchor="middle">you</text>`;
+}
+
+function stackByValue(scores, keyFn) {
+  // Viewer is first in the list, so it always sits at the bottom of its stack.
+  const seen = new Map();
+  return scores.map((s) => {
+    const k = keyFn(s.v);
+    const st = seen.get(k) || 0;
+    seen.set(k, st + 1);
+    return { ...s, st };
+  });
+}
+const svg = (h, body) => `<svg viewBox="0 0 ${W} ${h}" width="${W}" height="${h}" role="img">${body}</svg>`;
+
+/* ---------- variations ---------- */
+
+// A — current dot strip
+function vA(ds, th) {
+  const dots = stackByValue(ds.scores, (v) => v.toFixed(1));
+  const maxSt = Math.max(...dots.map((d) => d.st));
+  const ay = 8 + Math.max(36, maxSt * 7 + 10), h = ay + 26;
+  const you = dots.find((d) => d.you);
+  const colTop = ay - dots.filter((d) => d.v === you.v).reduce((m, d) => Math.max(m, d.st), 0) * 7;
+  let g = "";
+  if (th === "hl") g += vswipe(X(you.v), colTop - 8, ay + 4, 11, 5);
+  g += axis(ay);
+  for (const d of dots) if (!d.you) g += `<circle cx="${f(X(d.v))}" cy="${ay - d.st * 7}" r="3" fill="${C.dot}"/>`;
+  g += th === "hl"
+    ? `<circle cx="${f(X(you.v))}" cy="${ay}" r="3.2" fill="${C.ink}"/>`
+    : `<circle cx="${f(X(you.v))}" cy="${ay}" r="4.5" fill="${C.ink}"/>`;
+  g += youLabel(X(you.v), ay + 19, th);
+  return svg(h, g);
+}
+
+// B — dot strip, valence-coloured dots on a tinted axis
+function vB(ds, th) {
+  const dots = stackByValue(ds.scores, (v) => v.toFixed(1));
+  const maxSt = Math.max(...dots.map((d) => d.st));
+  const ay = 10 + Math.max(36, maxSt * 7 + 10), h = ay + 26;
+  const you = dots.find((d) => d.you);
+  let g = "";
+  if (th === "hl") g += bandWash(band(you.v), 4, ay + 6, 9, 0.38);
+  for (const [name, lo, hi] of BANDS)
+    g += `<line x1="${f(X(lo) + (lo ? 1.5 : 0))}" y1="${ay}" x2="${f(X(hi) - (hi < 10 ? 1.5 : 0))}" y2="${ay}" stroke="${C[name]}" stroke-width="2" opacity="0.55"/>`;
+  g += axisEnds(ay);
+  for (const d of dots) if (!d.you) g += `<circle cx="${f(X(d.v))}" cy="${ay - 3 - d.st * 7}" r="3" fill="${C[band(d.v)]}" opacity="0.72"/>`;
+  g += `<circle cx="${f(X(you.v))}" cy="${ay - 3}" r="4.5" fill="${C.ink}"/>`;
+  g += youLabel(X(you.v), ay + 19, th);
+  return svg(h, g);
+}
+
+// C — thin-bar histogram, 0.5 bins
+function vC(ds, th) {
+  const counts = new Array(21).fill(0);
+  for (const s of ds.scores) counts[Math.round(s.v * 2)]++;
+  const max = Math.max(...counts);
+  const unit = Math.min(7, 52 / max);
+  const ay = 14 + max * unit, h = ay + 30;
+  const yi = Math.round(ds.you.v * 2);
+  let g = "";
+  if (th === "hl") g += vswipe(X(yi / 2), ay - counts[yi] * unit - 8, ay + 5, 17, 11, 0.85);
+  g += axis(ay);
+  for (let k = 0; k <= 20; k++) {
+    if (!counts[k]) continue;
+    const bh = counts[k] * unit;
+    g += `<rect x="${f(X(k / 2) - 3.5)}" y="${f(ay - bh)}" width="7" height="${f(bh)}" fill="${C[band(k / 2)]}" opacity="0.85"/>`;
+  }
+  const yx = X(ds.you.v);
+  g += `<path d="M${f(yx)},${ay + 2} l-3.5,5 h7 z" fill="${C.ink}"/>`;
+  g += youLabel(yx, ay + 22, th);
+  return svg(h, g);
+}
+
+// D — symmetric beeswarm, valence coloured
+function vD(ds, th) {
+  const r = 3.1, d = 2 * r + 0.7;
+  const order = [ds.scores.find((s) => s.you), ...ds.scores.filter((s) => !s.you).sort((a, b) => a.v - b.v)];
+  const placed = [];
+  for (const s of order) {
+    const x = X(s.v);
+    const near = placed.filter((p) => Math.abs(p.x - x) < d);
+    const cands = [0];
+    for (const p of near) {
+      const dy = Math.sqrt(d * d - (p.x - x) ** 2);
+      cands.push(p.y + dy, p.y - dy);
+    }
+    cands.sort((a, b) => Math.abs(a) - Math.abs(b) || a - b);
+    const y = cands.find((c) => near.every((p) => (p.x - x) ** 2 + (p.y - c) ** 2 >= d * d - 0.01));
+    placed.push({ ...s, x, y });
+  }
+  const ext = Math.max(10, ...placed.map((p) => Math.abs(p.y))) + r + 4;
+  const cy = ext + 2, h = cy + ext + 22;
+  const you = placed.find((p) => p.you);
+  let g = "";
+  g += `<line x1="${L}" y1="${cy}" x2="${R}" y2="${cy}" stroke="${C.line}"/>` + axisEnds(cy);
+  for (const p of placed) if (!p.you) g += `<circle cx="${f(p.x)}" cy="${f(cy + p.y)}" r="${r}" fill="${C[band(p.v)]}" opacity="0.75"/>`;
+  if (th === "hl") g += swipe(you.x, cy + you.y, 20, 17, 17, 0.9, -8);
+  g += `<circle cx="${f(you.x)}" cy="${f(cy + you.y)}" r="4.3" fill="${C.ink}"/>`;
+  g += youLabel(you.x, cy + ext + 14, th);
+  return svg(h, g);
+}
+
+// E — smooth density curve, stroke tinted by valence band, rug of ticks
+function vE(ds, th) {
+  const vs = ds.scores.map((s) => s.v), n = vs.length;
+  const mean = vs.reduce((a, b) => a + b, 0) / n;
+  const sd = Math.sqrt(vs.reduce((a, b) => a + (b - mean) ** 2, 0) / n);
+  const bw = n < 5 ? 0.45 : Math.max(0.28, 1.06 * sd * n ** -0.2 * 0.6);
+  const xs = [];
+  for (let s = 0; s <= 10.0001; s += 0.05) xs.push(Math.round(s * 100) / 100);
+  const dens = xs.map((s) => vs.reduce((a, v) => a + Math.exp(-0.5 * ((s - v) / bw) ** 2), 0));
+  const peak = Math.max(...dens);
+  const PH = 50, ay = 8 + PH, h = ay + 36;
+  const Y = (dv) => ay - (dv / peak) * PH;
+  const pts = xs.map((s, i) => [X(s), Y(dens[i])]);
+  const area = `M${L},${ay} ` + pts.map((p) => `L${f(p[0])},${f(p[1])}`).join(" ") + ` L${R},${ay} Z`;
+  let g = `<path d="${area}" fill="${C.ink}" opacity="0.045"/>`;
+  if (th === "hl") {
+    const [, lo, hi] = bandOf(band(ds.you.v));
+    const seg = xs.map((s, i) => [s, i]).filter(([s]) => s >= lo && s <= hi);
+    const a = `M${f(X(seg[0][0]))},${ay} ` + seg.map(([s, i]) => `L${f(X(s))},${f(Y(dens[i]))}`).join(" ") + ` L${f(X(seg[seg.length - 1][0]))},${ay} Z`;
+    g += `<path d="${a}" fill="${C.hl}" opacity="0.6" style="mix-blend-mode:multiply"/>`;
+  }
+  for (const [name, lo, hi] of BANDS) {
+    const seg = pts.filter((p, i) => xs[i] >= lo - 0.03 && xs[i] <= hi + 0.03);
+    g += `<polyline points="${seg.map((p) => `${f(p[0])},${f(p[1])}`).join(" ")}" fill="none" stroke="${C[name]}" stroke-width="1.4" stroke-linejoin="round"/>`;
+  }
+  g += axis(ay);
+  for (const v of vs) g += `<line x1="${f(X(v))}" y1="${ay + 3}" x2="${f(X(v))}" y2="${ay + 9}" stroke="${C.muted}" stroke-width="1" opacity="0.45"/>`;
+  const yx = X(ds.you.v), ytop = Y(dens[Math.round(ds.you.v * 20)]);
+  g += `<line x1="${f(yx)}" y1="${f(ytop)}" x2="${f(yx)}" y2="${ay + 9}" stroke="${C.ink}" stroke-width="1.2"/>`;
+  g += `<circle cx="${f(yx)}" cy="${f(ytop)}" r="3" fill="${C.ink}"/>`;
+  g += youLabel(yx, ay + 26, th);
+  return svg(h, g);
+}
+
+// F — barcode: one tick per rating
+function vF(ds, th) {
+  const TH = 26, ay = 16 + TH, h = ay + 26;
+  const yx = X(ds.you.v);
+  let g = "";
+  if (th === "hl") g += vswipe(yx, ay - TH - 10, ay + 4, 9, 23, 0.95);
+  g += axis(ay);
+  for (const s of ds.scores) if (!s.you)
+    g += `<line x1="${f(X(s.v))}" y1="${ay - TH}" x2="${f(X(s.v))}" y2="${ay}" stroke="${C.ink}" stroke-width="1.4" opacity="0.26"/>`;
+  g += `<line x1="${f(yx)}" y1="${ay - TH - 8}" x2="${f(yx)}" y2="${ay}" stroke="${C.ink}" stroke-width="${th === "hl" ? 1.6 : 2.2}"/>`;
+  g += youLabel(yx, ay + 19, th);
+  return svg(h, g);
+}
+
+// G — unit dot plot: 0.5 bins, dots packed 3 wide
+function vG(ds, th) {
+  const per = 3, sp = 6.2, rr = 2.4;
+  const dots = stackByValue(ds.scores, (v) => Math.round(v * 2));
+  const maxRows = Math.max(...dots.map((d) => Math.floor(d.st / per))) + 1;
+  const ay = 10 + maxRows * sp + 4, h = ay + 28;
+  const you = dots.find((d) => d.you);
+  const yk = Math.round(you.v * 2);
+  const rowsYou = Math.floor((dots.filter((d) => Math.round(d.v * 2) === yk).length - 1) / per) + 1;
+  const pos = (d) => {
+    const cx = X(Math.round(d.v * 2) / 2) + ((d.st % per) - 1) * sp;
+    const cy = ay - 5 - Math.floor(d.st / per) * sp;
+    return [cx, cy];
+  };
+  let g = "";
+  if (th === "hl") g += vswipe(X(yk / 2), ay - 5 - rowsYou * sp - 3, ay + 4, 23, 29, 0.8);
+  g += axis(ay);
+  for (const d of dots) {
+    const [cx, cy] = pos(d);
+    g += d.you
+      ? `<circle cx="${f(cx)}" cy="${f(cy)}" r="${rr + 0.6}" fill="${C.ink}"/>`
+      : `<circle cx="${f(cx)}" cy="${f(cy)}" r="${rr}" fill="${C[band(d.v)]}" opacity="0.8"/>`;
+  }
+  g += youLabel(pos(you)[0], ay + 19, th);
+  return svg(h, g);
+}
+
+// H — band field with ticks and shares
+function vH(ds, th) {
+  const top = 22, FH = 30, bot = top + FH, h = bot + 30;
+  const yb = band(ds.you.v);
+  let g = "";
+  for (const [name, lo, hi] of BANDS) {
+    const x0 = X(lo) + (lo ? 1 : 0), x1 = X(hi) - (hi < 10 ? 1 : 0);
+    if (th === "hl" && name === yb) g += swipe((x0 + x1) / 2, top + FH / 2, x1 - x0, FH + 2, 31, 0.5, -0.5);
+    else g += `<rect x="${f(x0)}" y="${top}" width="${f(x1 - x0)}" height="${FH}" fill="${C[name]}" opacity="0.1"/>`;
+    const c = ds.scores.filter((s) => band(s.v) === name).length;
+    const pct = Math.round((c / ds.n) * 100);
+    g += `<text x="${f((x0 + x1) / 2)}" y="${bot + 20}" font-size="13" fill="${c ? C[name] : C.muted}" text-anchor="middle">${pct}%</text>`;
+  }
+  g += axisEnds(top + FH / 2);
+  for (const s of ds.scores) if (!s.you)
+    g += `<line x1="${f(X(s.v))}" y1="${top + 5}" x2="${f(X(s.v))}" y2="${bot - 5}" stroke="${C.ink}" stroke-width="1.2" opacity="0.3"/>`;
+  const yx = X(ds.you.v);
+  g += `<line x1="${f(yx)}" y1="${top - 3}" x2="${f(yx)}" y2="${bot}" stroke="${C.ink}" stroke-width="2"/>`;
+  g += youLabel(yx, top - 8, th);
+  return svg(h, g);
+}
+
+const VARIATIONS = [
+  ["A", "Dot strip (current)", vA, "Baseline. Honest and quiet, with exact positions. Identical scores stack, but near-identical ones (9.3 vs 9.4) overlap, so dense clusters turn into a grey smear and stack height means little."],
+  ["B", "Valence dot strip on a tinted axis", vB, "Same strip with each dot in its valence colour and the 0–10 line split into the three bands. You can read the shape and the verdict at a glance. Busier, and the colour partly repeats what position already says."],
+  ["C", "Thin-bar histogram (0.5 bins)", vC, "Counts are the clearest of any variation, and bar height means something at 80 people. Exact positions are lost, and with 2 people it looks like a chart with nothing in it."],
+  ["D", "Beeswarm", vD, "Every person is visible with no overlap, at their exact score. Clusters show as width, which reads very well for the consensus and divisive cases. It gets tall when 40+ people sit inside one point."],
+  ["E", "Density curve + rug", vE, "Shows the shape best: you see two humps for the divisive case straight away. With 2 people it invents a smooth shape that isn't really there. The rug ticks keep it honest, but the curve oversells sparse data."],
+  ["F", "Barcode", vF, "One faint tick per person. Density shows as darkness. The most minimal and editorial option, and it scales from 2 to 200. Counts are hard to read, and a dark patch could be 6 people or 16."],
+  ["G", "Unit dot plot (0.5 bins, 3 wide)", vG, "A histogram you can count dot by dot: each dot is one person. Stays compact at 80 and still means something at 2. Positions snap to half-points."],
+  ["H", "Band field with shares", vH, "Puts the verdict first. The three valence bands are shaded fields with ticks inside, plus a share under each band. Best for answering 'do people like it?'. Weakest for shape within a band."],
+];
+
+/* ---------- render ---------- */
+const sets = makeDatasets();
+const host = document.getElementById("variations");
+const toc = document.getElementById("toc");
+const THEMES = [["cur", "Current"], ["hl", "Highlighter"]];
+
+for (const [letter, name, fn, what] of VARIATIONS) {
+  toc.insertAdjacentHTML("beforeend", `<a href="#v-${letter}">${letter} · ${name}</a>`);
+  let cells = THEMES.map(([, label]) => `<div class="colhead">${label}</div>`).join("");
+  for (const ds of sets) {
+    for (const [th] of THEMES) {
+      cells += `<div class="cell">
+        <div class="title">${ds.title}</div>
+        <div class="row"><div class="avg-score ${band(ds.mean)}">${ds.mean.toFixed(1)}</div><div class="n">${ds.n} ${ds.n === 1 ? "person" : "people"}</div></div>
+        ${fn(ds, th)}
+      </div>`;
+    }
+  }
+  host.insertAdjacentHTML("beforeend", `<section class="variation" id="v-${letter}">
+    <h2><span class="letter">${letter}</span>${name}</h2>
+    <p class="what">${what}</p>
+    <div class="grid">${cells}</div>
+  </section>`);
+}
+</script>
+</body>
+</html>

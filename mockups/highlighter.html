@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Highlighter — direction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Tokens. App tokens copied from web/styles.css; highlighter tokens new.
+   ============================================================ */
+:root {
+  --bg: #faf9f5;
+  --ink: #1f1e1d;
+  --muted: #87867f;
+  --line: #e8e6dc;
+  --accent: #c96442;
+  --good: #5f7d4e;
+  --fine: #a08a4a;
+  --bad: #b5533c;
+
+  /* Highlighter */
+  --marker: #ffe14d;                     /* the pen: strokes, chips, solid fills */
+  --wash: rgba(255, 225, 77, 0.38);      /* hover, selection, live words */
+  --band: #fff0a3;                       /* C: ranker band */
+  --edge: #e3bc1e;                       /* borders and rings only, never text */
+
+  /* Hand-drawn marker strokes (inline SVG, stretched to the word) */
+  --mk-1: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 40' preserveAspectRatio='none'%3E%3Cpath d='M3 10 C 40 5, 110 8, 196 4 C 199 14, 197 24, 198 33 C 140 37, 70 33, 6 37 C 2 28, 5 19, 3 10 Z' fill='%23ffe14d' fill-opacity='.82'/%3E%3Cpath d='M9 15 C 60 11, 130 13, 191 10 L 189 27 C 120 30, 60 28, 10 31 Z' fill='%23ffd21f' fill-opacity='.28'/%3E%3C/svg%3E");
+  --mk-2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 40' preserveAspectRatio='none'%3E%3Cpath d='M2 15 C 50 7, 120 6, 197 2 C 199 12, 196 22, 197 29 C 130 34, 60 36, 4 39 C 1 31, 4 22, 2 15 Z' fill='%23ffe14d' fill-opacity='.82'/%3E%3Cpath d='M12 19 C 70 13, 140 11, 188 8 L 187 22 C 130 26, 70 28, 11 31 Z' fill='%23ffd21f' fill-opacity='.25'/%3E%3C/svg%3E");
+  --mk-3: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40' preserveAspectRatio='none'%3E%3Cpath d='M6 8 C 30 3, 70 4, 95 7 C 99 18, 97 30, 94 35 C 60 39, 30 37, 4 34 C 1 24, 3 15, 6 8 Z' fill='%23ffe14d' fill-opacity='.85'/%3E%3C/svg%3E");
+}
+
+/* ============================================================
+   Outer page (the review document)
+   ============================================================ */
+* { box-sizing: border-box; }
+html { background: #efede5; }
+body {
+  margin: 0;
+  background: #efede5;
+  color: var(--ink);
+  font-family: "Newsreader", Georgia, serif;
+  font-size: 18px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.doc { max-width: 1680px; margin: 0 auto; padding: 56px 32px 120px; }
+.doc > header h1 { font-weight: 400; font-size: 44px; letter-spacing: -0.02em; margin: 0 0 6px; line-height: 1.1; }
+.doc > header .lede { color: var(--muted); margin: 0 0 40px; max-width: 760px; }
+
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-bottom: 40px; }
+.sw { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.sw .chip { height: 72px; position: relative; }
+.sw .chip.on-bg { background: var(--bg); display: flex; align-items: center; padding: 0 16px; font-size: 22px; }
+.sw .body { padding: 12px 14px 14px; font-size: 15px; }
+.sw .name { font-weight: 500; }
+.sw code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; color: var(--muted); }
+.sw .use { color: var(--muted); font-size: 14px; margin-top: 4px; }
+
+.contrast { font-size: 15px; color: var(--muted); margin: -20px 0 40px; }
+.contrast b { color: var(--ink); font-weight: 500; }
+
+.treatments { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px 32px; margin-bottom: 48px; }
+.treatments h3 { font-weight: 500; font-size: 19px; margin: 0 0 4px; }
+.treatments p { margin: 0; font-size: 16px; color: #4a4945; }
+
+.toolbar { position: sticky; top: 0; z-index: 50; display: flex; gap: 20px; align-items: baseline; padding: 14px 0; background: rgba(239, 237, 229, 0.94); backdrop-filter: blur(6px); border-bottom: 1px solid #dedbcf; margin-bottom: 8px; font-size: 15px; color: var(--muted); flex-wrap: wrap; }
+.toolbar button { font: inherit; font-size: 15px; background: none; border: none; padding: 2px 8px; border-radius: 6px; color: var(--ink); cursor: pointer; }
+.toolbar button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.toolbar .sp { flex: 1; }
+
+.screen { margin-top: 56px; }
+.screen > h2 { font-weight: 400; font-size: 28px; margin: 0 0 4px; letter-spacing: -0.01em; }
+.screen > p.sub { color: var(--muted); margin: 0 0 18px; font-size: 16px; }
+
+.row { display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 24px; align-items: start; }
+.cell .label { display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; margin: 0 0 8px; }
+.cell .label b { font-weight: 500; }
+.cell .label span { color: var(--muted); font-size: 13.5px; }
+.cell .caption { color: var(--muted); font-size: 13.5px; margin-top: 8px; line-height: 1.4; }
+.frame { background: var(--bg); border: 1px solid #dcd9cd; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(31, 30, 29, 0.06); }
+
+/* ============================================================
+   The app, scoped to .app (faithful copy of web/styles.css)
+   Frame width 760 = nav + 620 column + gutters. Scaled with zoom.
+   ============================================================ */
+.app {
+  width: 760px;
+  zoom: var(--z, 1);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Newsreader", Georgia, serif;
+  font-size: 19px;
+  line-height: 1.5;
+}
+.app main { max-width: 620px; margin: 0 auto; padding: 40px 20px 64px; box-sizing: content-box; }
+.app h2 { font-weight: 400; font-size: 15px; color: var(--muted); margin: 56px 0 12px; }
+.app a { color: inherit; text-decoration: none; cursor: pointer; }
+.app button { font: inherit; font-size: 17px; background: none; border: none; padding: 0; color: var(--ink); cursor: pointer; }
+.app button:disabled { color: var(--muted); cursor: default; }
+.app a:hover, .app button.link:hover:not(:disabled), .app .k-hover { color: var(--accent); }
+.app button.quiet { color: var(--muted); }
+.app button.quiet:hover { color: var(--bad); }
+.app .spacer { flex: 1; }
+
+.app nav { display: flex; align-items: baseline; gap: 24px; font-size: 15px; color: var(--muted); padding: 24px 32px; background: rgba(250, 249, 245, 0.92); }
+.app nav a, .app nav button { font-size: 15px; color: inherit; }
+.app nav .home { letter-spacing: 0.04em; }
+
+/* Composer (a div standing in for the textarea so live words can be styled) */
+.app .textarea { min-height: 180px; font-size: 24px; line-height: 1.45; color: var(--ink); padding-bottom: 12px; }
+.app .caret { display: inline-block; width: 1.5px; height: 1.05em; background: var(--ink); vertical-align: -0.15em; margin-left: 1px; animation: blink 1.1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.app .actions { display: flex; gap: 20px; justify-content: flex-end; align-items: center; border-top: 1px solid var(--line); padding-top: 14px; }
+.app .recording { color: var(--accent); }
+.app .recording::before { content: "● "; }
+
+.app ol { list-style: none; margin: 0; padding: 0; }
+.app li { display: grid; grid-template-columns: 52px 1fr; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.app .score { font-variant-numeric: tabular-nums; font-weight: 500; }
+.app .score.good { color: var(--good); }
+.app .score.fine { color: var(--fine); }
+.app .score.bad { color: var(--bad); }
+.app .note { color: var(--muted); font-style: italic; font-size: 16px; }
+.app .meta { color: var(--muted); font-size: 15px; }
+.app .meta a { color: var(--ink); }
+.app .caught-up { text-align: center; color: var(--muted); font-size: 15px; margin: 28px 0 0; }
+.app .caught-up button { font-size: 15px; }
+
+/* Ranker */
+.app .ranker { padding-top: 24px; }
+.app .eyebrow { color: var(--muted); font-size: 15px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: baseline; }
+.app .eyebrow button { font-size: 15px; }
+.app .rank-head, .app .page-head { display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: start; }
+.app .title { font-size: 34px; line-height: 1.2; margin: 0 0 8px; }
+.app .prompt { margin: 48px 0 20px; color: var(--muted); }
+.app .versus { display: flex; flex-direction: column; gap: 12px; }
+.app .versus button { text-align: left; font-size: 24px; padding: 20px 22px; border: 1px solid var(--line); border-radius: 10px; transition: border-color 120ms, background 120ms; }
+.app .versus button:hover, .app .versus button.k-pick { border-color: var(--accent); }
+.app .or { color: var(--muted); font-style: italic; font-size: 15px; padding-left: 22px; }
+.app .editable { border-radius: 4px; outline: none; transition: background 120ms; cursor: text; }
+.app .editable:hover { background: rgba(31, 30, 29, 0.04); }
+.app .editable:focus, .app .editable.k-focus { background: rgba(201, 100, 66, 0.08); }
+.app .valences { display: flex; gap: 32px; font-size: 20px; margin-top: 48px; }
+.app .valences button { font-size: 20px; }
+.app .valences button:hover:not(:disabled) { color: var(--accent); }
+.app .valences button.chosen { color: var(--ink); text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 1px; }
+.app .valences button.dim { color: #c9c7be; }
+.app .stage { margin-top: 8px; }
+.app .big-score { font-size: 112px; line-height: 1; height: 1em; min-width: 2.4ch; text-align: right; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.app .big-score.good { color: var(--good); }
+.app .big-score.fine { color: var(--fine); }
+.app .big-score.bad { color: var(--bad); }
+.app .continue { margin-top: 40px; font-size: 20px; }
+
+/* Profile / experience */
+.app .avg { text-align: right; }
+.app .avg-score { font-size: 64px; line-height: 1; font-variant-numeric: tabular-nums; }
+.app .avg-score.good { color: var(--good); }
+.app .avg-score.fine { color: var(--fine); }
+.app .avg-score.bad { color: var(--bad); }
+.app button.inline { font-size: inherit; }
+.app .spectrum li { grid-template-columns: 44px 1fr auto; column-gap: 8px; align-items: baseline; }
+.app .rank { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 16px; }
+.app .spectrum .score { text-align: right; padding-left: 16px; }
+.app .mark { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--ink); margin-left: 8px; vertical-align: middle; }
+.app li.rated-by { grid-template-columns: 52px 1fr auto; align-items: baseline; }
+.app .date { padding-top: 2px; }
+.app .editable.empty-ph::before { content: attr(data-placeholder); color: #b9b7ae; }
+
+.app .strip { display: flex; align-items: flex-end; gap: 12px; margin: 40px 0 8px; }
+.app .strip-end { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1; }
+.app .strip-line { position: relative; flex: 1; height: 40px; border-bottom: 1px solid var(--line); }
+.app .strip-dot { position: absolute; width: 6px; height: 6px; margin-left: -3px; margin-bottom: -3px; border-radius: 50%; background: #c9c7be; }
+.app .strip-dot.you { width: 9px; height: 9px; margin-left: -4.5px; margin-bottom: -4.5px; background: var(--ink); z-index: 1; }
+.app .strip-you { position: absolute; top: 100%; transform: translateX(-50%); margin-top: 6px; font-size: 12px; color: var(--ink); }
+
+/* Fake text selection so the frame shows it without the reader selecting. Current/A: the OS default. */
+.app .k-sel { background: #b4d5fe; }
+
+/* ============================================================
+   A. Marker accent — hand-drawn strokes behind a few key words.
+   Hover/recording stay clay.
+   ============================================================ */
+.look-a .k-active,
+.look-a .k-you,
+.look-a .k-key,
+.look-a .k-live,
+.look-a .valences button.chosen .w,
+.look-a .bs {
+  background: var(--mk-1) no-repeat;
+  background-size: 100% 100%;
+  padding: 0 0.28em;
+  margin: 0 -0.28em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  color: var(--ink);
+}
+.look-a nav .k-active { background-image: var(--mk-2); background-size: 100% 70%; background-position: 0 90%; }
+.look-a .k-key { background-image: var(--mk-2); }
+.look-a .k-live { background-image: var(--mk-2); }
+/* "Low" stroke under large numerals: valence color stays readable, the pen sits under the bottom half */
+.look-a .bs { background-image: var(--mk-3); background-size: 100% 46%; background-position: 0 88%; padding: 0 0.08em; margin: 0 -0.08em; color: inherit; }
+.look-a .score.k-you { background-image: var(--mk-3); background-size: 100% 60%; background-position: 0 85%; color: var(--ink); }
+.look-a .valences button.chosen { text-decoration: none; }
+.look-a .valences button.chosen .w { background-image: var(--mk-2); padding: 0 0.35em; margin: 0 -0.35em; }
+.look-a .strip-you { background: var(--mk-3) no-repeat; background-size: 100% 100%; padding: 0 5px; }
+.look-a .mark { width: 14px; height: 7px; border-radius: 0; background: var(--mk-3) no-repeat; background-size: 100% 100%; }
+.look-a li.k-you-row .who { background: var(--mk-1) no-repeat; background-size: 100% 70%; background-position: 0 85%; padding: 0 0.25em; margin: 0 -0.25em; }
+
+/* ============================================================
+   B. Highlighter as the interaction color — replaces clay.
+   Never yellow text: hover/focus/selection become a wash behind ink.
+   ============================================================ */
+.look-b ::selection { background: var(--marker); color: var(--ink); }
+.look-b .k-sel { background: var(--marker); color: var(--ink); }
+.look-b a:hover, .look-b button.link:hover:not(:disabled), .look-b .k-hover {
+  color: var(--ink); background: var(--wash); box-shadow: 0 0 0 0.14em var(--wash); border-radius: 2px;
+}
+.look-b button.quiet:hover { color: var(--bad); background: none; box-shadow: none; }
+.look-b .recording { color: var(--ink); background: var(--wash); box-shadow: 0 0 0 0.25em var(--wash); border-radius: 3px; }
+.look-b .recording::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ink); margin-right: 7px; vertical-align: 2px; animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 225, 77, 0.9); } 50% { box-shadow: 0 0 0 5px rgba(255, 225, 77, 0.9); } }
+.look-b .k-live { background: var(--wash); border-radius: 2px; }
+.look-b .editable:focus, .look-b .editable.k-focus { background: var(--wash); box-shadow: 0 0 0 3px var(--wash); }
+.look-b .valences button:hover:not(:disabled) { color: var(--ink); background: var(--wash); }
+.look-b .valences button.chosen { text-decoration-color: var(--marker); text-decoration-thickness: 0.42em; text-underline-offset: -0.22em; text-decoration-skip-ink: none; }
+.look-b .versus button:hover, .look-b .versus button.k-pick { border-color: var(--edge); background: var(--wash); }
+.look-b .strip-dot.you { box-shadow: 0 0 0 4px var(--wash); }
+.look-b .caret { background: var(--ink); box-shadow: 0 0 0 1px var(--wash); }
+
+/* ============================================================
+   C. Bolder — yellow as the brand color.
+   Solid wordmark, primary actions as yellow chips, band in the ranker,
+   big scores on a block.
+   ============================================================ */
+.look-c ::selection { background: var(--marker); color: var(--ink); }
+.look-c .k-sel { background: var(--marker); color: var(--ink); }
+.look-c a:hover, .look-c button.link:hover:not(:disabled), .look-c .k-hover { color: var(--ink); background: var(--wash); box-shadow: 0 0 0 0.14em var(--wash); border-radius: 2px; }
+.look-c button.quiet:hover { color: var(--bad); background: none; box-shadow: none; }
+.look-c nav .home { background: var(--marker); color: var(--ink); padding: 3px 9px 2px; letter-spacing: 0.04em; clip-path: polygon(0 6%, 100% 0, 99% 100%, 1% 94%); }
+.look-c nav .k-active { color: var(--ink); box-shadow: inset 0 -0.42em 0 var(--marker); }
+.look-c .primary, .look-c .continue, .look-c .follow { background: var(--marker); color: var(--ink); padding: 4px 14px; border-radius: 999px; }
+.look-c .primary:hover, .look-c .continue:hover, .look-c .follow:hover { background: #ffd61f !important; box-shadow: none !important; }
+.look-c .recording { color: var(--ink); }
+.look-c .recording::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--marker); border: 1.5px solid var(--ink); margin-right: 7px; vertical-align: 1px; animation: pulse 1.4s ease-in-out infinite; }
+.look-c .k-live { background: var(--marker); }
+.look-c .page-head .title .t { box-shadow: inset 0 -0.34em 0 var(--marker); }
+.look-c .rank-band { background: var(--band); margin: -24px -70px 0; padding: 28px 70px 30px; border-bottom: 1px solid #f1dc72; }
+.look-c .rank-band .eyebrow { color: #6d6a5a; }
+.look-c .rank-band .note { color: #6d6a5a; }
+.look-c .rank-band button.quiet { color: #6d6a5a; }
+.look-c .bs { background: var(--marker); padding: 0 0.1em; display: inline-block; line-height: 0.95; clip-path: polygon(0 4%, 100% 0, 100% 100%, 0 96%); }
+.look-c .rank-band .bs { background: none; } /* on the band the number already sits on yellow */
+.look-c .avg-score .bs { padding: 4px 10px 0; }
+.look-c .valences button.chosen { text-decoration: none; background: var(--marker); padding: 2px 12px; margin: -2px -12px; border-radius: 4px; }
+.look-c .versus button:hover { border-color: var(--edge); background: var(--wash); }
+.look-c .versus button.k-pick { border-color: var(--marker); background: var(--marker); }
+.look-c .editable:focus, .look-c .editable.k-focus { background: rgba(255, 255, 255, 0.6); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.6); }
+.look-c .strip-dot.you { background: var(--marker); border: 1.5px solid var(--ink); width: 11px; height: 11px; margin-left: -5.5px; margin-bottom: -5.5px; }
+.look-c .strip-you { background: var(--marker); padding: 0 5px; border-radius: 3px; }
+.look-c .mark { background: var(--marker); box-shadow: 0 0 0 1px var(--ink); width: 6px; height: 6px; }
+.look-c .score.k-you { background: var(--marker); padding: 0 5px; border-radius: 3px; color: var(--ink); }
+.look-c li.k-you-row { background: linear-gradient(90deg, var(--wash), rgba(255, 225, 77, 0) 85%); }
+.look-c h2.k-h2 { color: var(--ink); }
+
+@media (max-width: 700px) {
+  .doc { padding: 32px 16px 80px; }
+  .doc > header h1 { font-size: 34px; }
+}
+</style>
+</head>
+<body>
+<div class="doc">
+  <header>
+    <h1>Highlighter, as an accent</h1>
+    <p class="lede">Four screens of Every human experience, each in the current look and three highlighter treatments. The frames are live: hover links, buttons and comparison options to see each look's interaction color, and select text to see its selection color. Things that only happen on hover or focus are also pinned in place and listed under each frame.</p>
+  </header>
+
+  <section class="swatches" aria-label="Swatches">
+    <div class="sw"><div class="chip" style="background:#ffe14d"></div><div class="body"><div class="name">Marker</div><code>#FFE14D</code><div class="use">The pen. Strokes, chips, solid fills. Warm enough not to read as lime next to clay.</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--bg)"><div style="position:absolute;inset:0;background:rgba(255,225,77,.38)"></div></div><div class="body"><div class="name">Wash</div><code>#FFE14D @ 38%</code><div class="use">Hover, focus, live transcription. Shows up on #faf9f5 without shouting.</div></div></div>
+    <div class="sw"><div class="chip" style="background:#fff0a3"></div><div class="body"><div class="name">Band</div><code>#FFF0A3</code><div class="use">C only: the pale band behind the ranker header.</div></div></div>
+    <div class="sw"><div class="chip" style="background:#e3bc1e"></div><div class="body"><div class="name">Edge</div><code>#E3BC1E</code><div class="use">Borders and rings only (chosen option outline). Never text.</div></div></div>
+    <div class="sw"><div class="chip on-bg"><span style="background:var(--mk-1) no-repeat;background-size:100% 100%;padding:0 .3em">hand-drawn stroke</span></div><div class="body"><div class="name">Stroke</div><code>inline SVG, 2 layers</code><div class="use">A only. Irregular edges and a darker inner pass, stretched to fit the word.</div></div></div>
+  </section>
+  <p class="contrast">Contrast on Marker: <b>ink 12.8:1</b> · good 3.6:1 · bad 3.7:1 · <b>fine 2.6:1 (fails, even at large sizes)</b>. Marker as text on #faf9f5: 1.2:1, so yellow never carries text here, only sits behind it.</p>
+
+  <section class="treatments">
+    <div><h3>Current</h3><p>Today's site. Clay #c96442 appears only on hover and while recording. Hierarchy comes from serif size alone, and color only means valence.</p></div>
+    <div><h3>A. Marker accent</h3><p>A real pen used sparingly. Hand-drawn strokes go behind a few words that are about <i>you</i> or are the answer: the active nav item, your chosen “Good”, your score, “78% match”, the “you” marker, the words still being transcribed. Hover stays clay.</p></div>
+    <div><h3>B. Interaction color</h3><p>Yellow replaces clay for everything you touch: hover becomes a wash behind ink, the editable field you're in gets a wash, text selection is yellow, the comparison option you're on gets a wash and an amber edge, and recording gets a pulsing dot. At rest the page looks like Current.</p></div>
+    <div><h3>C. Bolder</h3><p>Yellow as the brand color. A solid wordmark, primary actions (Done, Next, Follow) as yellow pills, page titles underlined in yellow, a pale band across the ranker header, big scores on a yellow block, the chosen option filled solid.</p></div>
+  </section>
+
+  <div class="toolbar">
+    <span>Frames per row</span>
+    <button data-cols="1">1</button>
+    <button data-cols="2" aria-pressed="true">2</button>
+    <button data-cols="4">4</button>
+    <span class="sp"></span>
+    <button id="replay">Replay score count-up</button>
+  </div>
+
+  <div id="screens"></div>
+</div>
+
+<script>
+"use strict";
+
+const LOOKS = [
+  { id: "current", name: "Current", tag: "today" },
+  { id: "a", name: "A. Marker accent", tag: "pen, sparingly" },
+  { id: "b", name: "B. Interaction color", tag: "replaces clay" },
+  { id: "c", name: "C. Bolder", tag: "brand color" },
+];
+
+const valenceOf = (s) => (s >= 6.7 ? "good" : s >= 3.4 ? "fine" : "bad");
+const score = (s, extra = "") => `<span class="score ${valenceOf(s)} ${extra}">${s.toFixed(1)}</span>`;
+
+function nav(active) {
+  const cls = (k) => (active === k ? "k-active" : "");
+  return `<nav>
+    <a class="home ${cls("home")}">Every human experience</a>
+    <span class="spacer"></span>
+    <a class="${cls("everything")}">Everything</a>
+    <button class="link">Search</button>
+    <a class="${cls("me")}">Theo</a>
+  </nav>`;
+}
+
+// ---------- Home ----------
+const FEED = [
+  [9.6, "Getting engaged", "On the bluff at Point Reyes. He dropped the ring in the ice plant first.", "Maya Okafor", "2h"],
+  [3.1, "Wet socks for the rest of a hike", "Six miles. Squelching the entire time.", "Jordan Lee", "4h", "hover"],
+  [7.8, "Finding a $20 bill in last winter's coat", "", "Sam Reyes", "5h"],
+  [5.4, "The DMV, but it only took 40 minutes", "Low bar. Cleared it.", "Priya Shah", "9h"],
+  [1.9, "Biting into an oatmeal raisin expecting chocolate chip", "Betrayal at the bake sale.", "Alex Chen", "1d"],
+  [8.2, "First swim of the summer when the water is still too cold", "Screamed. Worth it.", "Noor Haddad", "1d"],
+];
+
+function home() {
+  return `${nav("home")}<main>
+    <section>
+      <div class="textarea">Hiked Steep Ravine with Priya. It rained the whole second half and my socks were soaked by mile three. Burritos after at the cash-only place in Fairfax, <span class="k-live">and I had to borrow six dollars from her</span><span class="caret"></span></div>
+      <div class="actions">
+        <button class="link quiet">Discard</button>
+        <span class="spacer"></span>
+        <button class="link recording">Stop</button>
+        <button class="link primary">Done</button>
+      </div>
+    </section>
+    <h2>Feed</h2>
+    <ol>${FEED.map(([s, t, n, who, ago, h]) => `
+      <li>${score(s)}<div>
+        <a class="${h ? "k-hover" : ""}">${t}</a>
+        ${n ? `<div class="note">${n}</div>` : ""}
+        <div class="meta"><a>${who}</a> · ${ago}</div>
+      </div></li>`).join("")}
+    </ol>
+    <p class="caught-up">You're caught up · <button class="link">Show older</button></p>
+  </main>`;
+}
+
+// ---------- Ranker ----------
+const ITEM = "Burritos at the cash-only place in Fairfax";
+function ranker(final) {
+  return `${nav(null)}<main>
+    <section class="ranker">
+      <div class="rank-band">
+        <div class="eyebrow"><span>${final ? "2" : "3"} to rank · more coming</span>${final ? "" : `<button class="link quiet">Discard</button>`}</div>
+        <div class="rank-head">
+          <div>
+            <p class="title"><span class="editable">${ITEM}</span></p>
+            <div class="note"><span class="editable ${final ? "" : "k-focus"}">Borrowed $6 from Priya. The al pastor was unreal.</span></div>
+          </div>
+          <div class="big-score ${final ? "good" : ""}">${final ? `<span class="bs"><span class="countup" data-to="8.4">8.4</span></span>` : ""}</div>
+        </div>
+      </div>
+      <div class="valences">
+        <button class="chosen" disabled style="color:var(--ink)"><span class="w">Good</span></button>
+        <button class="dim" disabled>Fine</button>
+        <button class="dim" disabled>Bad</button>
+      </div>
+      <div class="stage">${final
+        ? `<button class="link continue">Next</button>`
+        : `<p class="prompt">Which was better?</p>
+           <div class="versus">
+             <button class="k-pick">${ITEM}</button>
+             <span class="or">or</span>
+             <button>Dumplings at 2am after the Bon Iver show</button>
+           </div>`}
+      </div>
+    </section>
+  </main>`;
+}
+
+// ---------- Profile ----------
+const SPECTRUM = [
+  ["Getting engaged", "On the bluff at Point Reyes.", 9.6, false],
+  ["Seeing the northern lights from a gas station parking lot", "", 9.4, true],
+  ["Making the last train home by one second", "Ran the whole platform in Chelsea boots.", 9.1, true],
+  ["The first bite of a perfectly ripe peach", "", 8.9, true],
+  ["Finishing a 1,000-piece puzzle with no missing pieces", "Two weeks on the dining table. 2×", 8.3, false],
+  ["A stranger's dog choosing to sit next to you", "", 8.0, true],
+  ["Re-reading an old journal", "Cringed, then cried.", 6.1, false],
+  ["Jury duty", "Dismissed by noon.", 5.0, false],
+  ["Stepping on a Lego in the dark", "", 2.4, true],
+  ["Wet socks for the rest of a hike", "Every hike in Scotland, honestly.", 1.8, true],
+];
+
+function profile() {
+  return `${nav(null)}<main>
+    <div class="page-head">
+      <div>
+        <p class="title"><span class="t">Maya Okafor</span></p>
+        <div class="meta">@maya · 212 ranked · <span class="k-key">78% match</span></div>
+        <div class="meta"><a>1,204 followers</a> · <a>311 following</a></div>
+      </div>
+      <button class="link follow">Follow</button>
+    </div>
+    <h2 class="k-h2">Sorted experiences</h2>
+    <ol class="spectrum">${SPECTRUM.map(([t, n, s, m], i) => `
+      <li><span class="rank">${i + 1}</span><div>
+        <a class="${i === 2 ? "k-hover" : ""}">${t}</a>${m ? `<span class="mark" title="You've rated this"></span>` : ""}
+        ${n ? `<div class="note">${n}</div>` : ""}
+      </div>${score(s)}</li>`).join("")}
+    </ol>
+  </main>`;
+}
+
+// ---------- Experience ----------
+// 41 raters; identical scores stack upward like the real DotStrip.
+const STRIP = [0.4, 0.9, 1.1, 1.3, 1.5, 1.6, 1.8, 1.8, 1.9, 2.0, 2.1, 2.1, 2.2, 2.3, 2.4, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.8, 3.9, 4.1, 4.4, 4.6, 4.9, 5.2, 5.5, 6.0, 6.2, 7.1, 1.7];
+const YOU = 1.8;
+const EVERYONE = [
+  [6.0, "Alex Chen", "alex", "52% match", "Trail runner. Wet socks are a lifestyle.", "Follow"],
+  [4.4, "Priya Shah", "priya", "64% match", "Honestly fine once you stop fighting it.", "Following"],
+  [3.0, "Noor Haddad", "noor", "71% match", "", "Follow"],
+  [2.1, "Jordan Lee", "jordan", "91% match", "Six miles. <span class=\"k-sel\">Squelching the entire time.</span>", "Following"],
+  [1.8, "Theo Li", "theo", "", "Steep Ravine. Mile three to mile nine.", null],
+  [0.9, "Sam Reyes", "sam", "47% match", "Blisters before the parking lot. 2×", "Follow"],
+];
+
+function experience() {
+  const seen = new Map();
+  let youMarked = false;
+  const dots = STRIP.map((s) => {
+    const k = s.toFixed(1);
+    const stack = seen.get(k) ?? 0;
+    seen.set(k, stack + 1);
+    const you = !youMarked && s === YOU;
+    if (you) youMarked = true;
+    return `<span class="strip-dot ${you ? "you" : ""}" style="left:${s * 10}%;bottom:${stack * 7}px"></span>`;
+  }).join("");
+
+  return `${nav("everything")}<main>
+    <div class="page-head">
+      <div>
+        <p class="title"><span class="t">Wet socks for the rest of a hike</span></p>
+        <div class="meta">41 people · <button class="link inline">Re-rate</button></div>
+      </div>
+      <div class="avg"><div class="avg-score bad"><span class="bs">2.6</span></div><div class="meta">score</div></div>
+    </div>
+    <div class="strip">
+      <span class="strip-end">0</span>
+      <div class="strip-line">${dots}<span class="strip-you" style="left:${YOU * 10}%">you</span></div>
+      <span class="strip-end">10</span>
+    </div>
+    <h2 class="k-h2">You · ${score(YOU, "k-you")}</h2>
+    <ol>
+      <li><span class="meta date">Oct 12</span><div class="note"><span class="editable k-focus">Steep Ravine. Mile three to mile nine.</span></div></li>
+      <li><span class="meta date">Mar 3</span><div class="note"><span class="editable empty-ph" data-placeholder="Add a note"></span></div></li>
+    </ol>
+    <h2>Everyone</h2>
+    <ol>${EVERYONE.map(([s, name, handle, match, note, follow]) => `
+      <li class="rated-by ${follow === null ? "k-you-row" : ""}">${score(s)}<div>
+        <a class="who">${name}</a><span class="meta"> @${handle}${match ? ` · ${match}` : ""}</span>
+        ${note ? `<div class="note">${note}</div>` : ""}
+      </div>${follow === null ? "<span></span>" : `<span><button class="link ${follow === "Following" ? "quiet" : "follow"}">${follow}</button></span>`}</li>`).join("")}
+    </ol>
+  </main>`;
+}
+
+// ---------- What each frame pins in place ----------
+const SCREENS = [
+  {
+    title: "Home",
+    sub: "The composer mid-recording (the last few words are still being transcribed), then the feed and “You're caught up”.",
+    render: home,
+    captions: {
+      current: "Recording is clay. Pinned hover on “Wet socks…” shows clay text.",
+      a: "Strokes on the active nav item (wordmark) and on the words still being heard. Hover and recording stay clay.",
+      b: "Recording is a wash with a pulsing dot. Live words are washed. Pinned hover shows a wash behind ink.",
+      c: "Solid wordmark, Done as a yellow pill, live words on solid yellow, hover as a wash.",
+    },
+  },
+  {
+    title: "Ranker: comparing",
+    sub: "Good is chosen, “Which was better?” is up. The pointer is on the new experience, and the note is being edited.",
+    render: () => ranker(false),
+    captions: {
+      current: "Chosen valence underlined. Option under the pointer gets a clay border. Note in focus is tinted clay.",
+      a: "“Good” is marked by a pen stroke. Everything else as Current.",
+      b: "Thick yellow underline under “Good”. Option under the pointer gets a wash and an amber edge. Note in focus is washed.",
+      c: "Yellow band across the header, “Good” on a solid block, chosen option filled solid.",
+    },
+  },
+  {
+    title: "Ranker: scored",
+    sub: "The final state: the score counts up top-right (use Replay in the toolbar to run it again), then Next.",
+    render: () => ranker(true),
+    captions: {
+      current: "Valence-colored 8.4, with Next as a text button.",
+      a: "A low pen stroke under the bottom half of 8.4 keeps the green readable.",
+      b: "Same as Current at rest. Yellow only appears once you interact.",
+      c: "8.4 sits on the band, with Next as a yellow pill.",
+    },
+  },
+  {
+    title: "Profile",
+    sub: "Someone else's profile: match, a Follow button, and their sorted experiences. A dot marks the ones you've rated too.",
+    render: profile,
+    captions: {
+      current: "“You've rated this” is a 5px ink dot. Pinned hover on row 3.",
+      a: "“78% match” is marked, and the you-rated dot becomes a tiny pen dab.",
+      b: "Pinned hover on row 3 is a wash. At rest it's unchanged.",
+      c: "Name underlined in yellow, Follow as a yellow pill, you-rated dots are yellow with an ink ring.",
+    },
+  },
+  {
+    title: "Experience",
+    sub: "Global score, the 0–10 distribution strip, your own entries, everyone's scores. The “Jordan” note has text selected, and your Oct 12 note is in focus.",
+    render: experience,
+    captions: {
+      current: "OS-blue selection, a clay-tinted focus, and you shown as an ink dot.",
+      a: "Strokes on the “you” label, your score in the heading, your name in Everyone, and under the global 2.6.",
+      b: "Yellow selection, a washed focus, and a yellow halo around your dot.",
+      c: "Global score on a yellow block, your dot yellow, your row faded in yellow, your score on a chip.",
+    },
+  },
+];
+
+// ---------- Build ----------
+const root = document.getElementById("screens");
+for (const s of SCREENS) {
+  const sec = document.createElement("section");
+  sec.className = "screen";
+  sec.innerHTML = `<h2>${s.title}</h2><p class="sub">${s.sub}</p><div class="row">${LOOKS.map((l) => `
+    <div class="cell">
+      <div class="label"><b>${l.name}</b><span>${l.tag}</span></div>
+      <div class="frame"><div class="app look-${l.id}">${s.render()}</div></div>
+      <div class="caption">${s.captions[l.id]}</div>
+    </div>`).join("")}</div>`;
+  root.appendChild(sec);
+}
+
+// The real app has no handlers here; keep clicks from doing anything surprising.
+document.querySelectorAll(".app a, .app button").forEach((el) => el.addEventListener("click", (e) => e.preventDefault()));
+// Make the note editables actually editable so focus styles can be tried.
+document.querySelectorAll(".app .editable").forEach((el) => el.setAttribute("contenteditable", "true"));
+
+// ---------- Scale frames to their column ----------
+const FRAME_W = 760;
+function fit() {
+  document.querySelectorAll(".frame").forEach((f) => {
+    const w = f.clientWidth;
+    if (!w) throw new Error("frame has no width");
+    f.firstElementChild.style.setProperty("--z", Math.min(1, w / FRAME_W).toFixed(4));
+  });
+}
+new ResizeObserver(fit).observe(root);
+
+const colButtons = document.querySelectorAll(".toolbar [data-cols]");
+function setCols(n) {
+  document.documentElement.style.setProperty("--cols", n);
+  colButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.cols === String(n))));
+  if (window.innerWidth < 900 && n > 1) document.documentElement.style.setProperty("--cols", 1);
+  fit();
+}
+colButtons.forEach((b) => b.addEventListener("click", () => setCols(Number(b.dataset.cols))));
+setCols(window.innerWidth < 900 ? 1 : 2);
+
+// ---------- Score count-up (same easing as CountUp in ranker.tsx) ----------
+const REVEAL_MS = 1400;
+function countUp(el) {
+  const to = Number(el.dataset.to);
+  if (Number.isNaN(to)) throw new Error("countup needs data-to");
+  const start = performance.now();
+  requestAnimationFrame(function tick(now) {
+    const t = Math.min((now - start) / REVEAL_MS, 1);
+    el.textContent = (to * (1 - Math.pow(1 - t, 3))).toFixed(1);
+    if (t < 1) requestAnimationFrame(tick);
+  });
+}
+const counters = document.querySelectorAll(".countup");
+const io = new IntersectionObserver((entries) => {
+  for (const e of entries) if (e.isIntersecting) { countUp(e.target); io.unobserve(e.target); }
+}, { threshold: 0.6 });
+counters.forEach((c) => io.observe(c));
+document.getElementById("replay").addEventListener("click", () => {
+  counters.forEach(countUp);
+  counters[0].closest(".screen").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+</script>
+</body>
+</html>

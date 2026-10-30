@@ -1,0 +1,830 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spectrum rail — variations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap">
+<style>
+:root {
+  --bg: #faf9f5;
+  --ink: #1f1e1d;
+  --muted: #87867f;
+  --line: #e8e6dc;
+  --line-2: #d6d3c6;
+  --good: #5f7d4e;
+  --fine: #a08a4a;
+  --bad: #b5533c;
+  --hl: #ffe14d;
+  --hl-soft: #fff176;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); }
+body {
+  font-family: "Newsreader", Georgia, serif;
+  font-size: 17px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; }
+
+/* ---------- page ---------- */
+header.page, main { max-width: 1240px; margin: 0 auto; padding: 0 32px; }
+header.page { padding-top: 64px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
+header.page h1 { font-weight: 400; font-size: 40px; margin: 0 0 10px; letter-spacing: -0.01em; }
+header.page p { color: var(--muted); max-width: 720px; margin: 0 0 6px; }
+header.page .legend { margin-top: 14px; font-size: 15px; color: var(--muted); }
+header.page .legend b { font-weight: 500; color: var(--ink); }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: -1px; margin: 0 4px 0 10px; }
+.sw.good { background: var(--good); } .sw.fine { background: var(--fine); } .sw.bad { background: var(--bad); }
+.sw.hl { background: var(--hl); border-radius: 2px 5px 3px 6px; width: 16px; }
+
+section.variation { padding: 48px 0 40px; border-bottom: 1px solid var(--line); }
+section.variation h2 { font-weight: 400; font-size: 26px; margin: 0 0 4px; }
+section.variation h2 .letter { color: var(--muted); margin-right: 10px; font-style: italic; }
+section.variation .note { color: var(--muted); margin: 0 0 22px; max-width: 900px; font-size: 16px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+@media (max-width: 960px) { .pair { grid-template-columns: 1fr; } }
+figure { margin: 0; min-width: 0; }
+figcaption { font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+figcaption em { text-transform: none; letter-spacing: 0; font-size: 14px; margin-left: 6px; }
+
+/* ---------- panel ---------- */
+.panel {
+  position: relative;
+  height: 360px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.rail {
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 14px;
+  width: var(--rw, 84px);
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+}
+.list {
+  position: absolute;
+  top: 0; bottom: 0; right: 0;
+  left: calc(var(--rw, 84px) + 26px);
+  overflow-y: auto;
+  border-left: 1px solid var(--line);
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.list ol { list-style: none; margin: 0; padding: 0 18px 0 14px; }
+.list li {
+  height: 32px;
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  column-gap: 6px;
+  font-size: 15px;
+  white-space: nowrap;
+  transition: background 600ms;
+}
+.list li .rk { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+.list li .tt { overflow: hidden; text-overflow: ellipsis; }
+.list li .mark { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--ink); margin-left: 8px; vertical-align: middle; }
+.hl .list li .mark { width: 9px; height: 6px; background: var(--hl); border-radius: 2px 4px 2px 5px; }
+.list li.flash { background: rgba(31, 30, 29, 0.05); transition: none; }
+.hl .list li.flash { background: rgba(255, 225, 77, 0.45); }
+.score { font-variant-numeric: tabular-nums; font-weight: 500; }
+.score.good { color: var(--good); } .score.fine { color: var(--fine); } .score.bad { color: var(--bad); }
+
+/* peek card (as in the app) */
+.peek {
+  position: absolute;
+  left: calc(var(--rw, 84px) + 24px);
+  z-index: 5;
+  display: none;
+  transform: translateY(-50%);
+  max-width: calc(100% - var(--rw, 84px) - 40px);
+  padding: 10px 14px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(31, 30, 29, 0.08);
+  font-size: 16px;
+  pointer-events: none;
+}
+.peek.on { display: block; }
+.peek .pk-main { display: flex; align-items: baseline; gap: 12px; white-space: nowrap; }
+.peek .pk-rank { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.peek .pk-title { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.peek .pk-extra:empty { display: none; }
+.peek .pk-extra { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+.peek .pk-extra div { display: grid; grid-template-columns: 44px 1fr auto; gap: 6px; white-space: nowrap; }
+.peek .pk-extra div span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; }
+
+/* Highlighter: the peek title gets a marker stroke with ragged ends */
+.hl .peek .pk-title {
+  padding: 0 0.3em;
+  margin: 0 -0.15em;
+  border-radius: 0.6em 0.25em 0.7em 0.2em / 0.4em 0.7em 0.3em 0.6em;
+  background-image:
+    linear-gradient(100deg, rgba(255,225,77,0) 0%, rgba(255,225,77,0.75) 2%, var(--hl-soft) 6%, rgba(255,225,77,0.85) 50%, var(--hl) 92%, rgba(255,225,77,0.35) 98%, rgba(255,225,77,0) 100%);
+  background-size: 100% 78%;
+  background-position: 0 65%;
+  background-repeat: no-repeat;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* shared rail atoms */
+.rail > * { position: absolute; }
+.t { left: 0; height: 8px; margin-top: -4px; display: flex; align-items: center; pointer-events: none; }
+.lab { font-size: 11px; line-height: 1; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.t.good .bar, .t.good .dot { background: var(--good); }
+.t.fine .bar, .t.fine .dot { background: var(--fine); }
+.t.bad  .bar, .t.bad  .dot { background: var(--bad); }
+
+/* Highlighter swipe for the active position (hidden in Current) */
+.swipe {
+  display: none;
+  height: 10px;
+  margin-top: -5px;
+  left: var(--sl, 0px);
+  width: var(--sw, 60px);
+  background: linear-gradient(95deg, rgba(255,225,77,0.55), var(--hl) 12%, var(--hl-soft) 55%, var(--hl) 88%, rgba(255,225,77,0.5));
+  border-radius: 3px 7px 2px 8px / 6px 3px 7px 3px;
+  transform: rotate(-1.4deg);
+  transition: top 140ms ease;
+  pointer-events: none;
+}
+.hl .swipe { display: block; }
+
+/* ===== A — Dial (baseline) ===== */
+.va .lab { width: 26px; }
+.va .bar { margin-left: 6px; height: 1px; width: 6px; opacity: 0.55; transition: width 140ms ease, opacity 140ms, height 140ms; }
+.va .t.major .bar { width: 12px; opacity: 0.85; }
+.va .t.active .bar { height: 2px; width: 16px; opacity: 1; background: var(--ink); }
+.va .t.active .lab { color: var(--ink); }
+.va .t.hov .bar { height: 2px; width: 26px; opacity: 1; }
+.va .t.marked::after { content: ""; position: absolute; left: 66px; width: 3px; height: 3px; border-radius: 50%; background: var(--ink); }
+.hl .va .t.marked::after { left: 63px; width: 9px; height: 4px; border-radius: 2px 4px 2px 5px; background: var(--hl); }
+
+/* ===== B — Beads ===== */
+.vb .lab { width: 26px; }
+.vb .t .slot { width: 18px; display: flex; justify-content: center; align-items: center; margin-left: 4px; }
+.vb .dot { width: 3px; height: 3px; border-radius: 50%; opacity: 0.6; transition: transform 140ms, opacity 140ms; }
+.vb .t.major .dot { width: 5px; height: 5px; opacity: 0.9; }
+.vb .t.marked .dot { box-shadow: 0 0 0 1px var(--bg), 0 0 0 1.8px rgba(31, 30, 29, 0.6); opacity: 1; }
+.vb .t.active .dot { background: var(--ink); width: 7px; height: 7px; opacity: 1; box-shadow: none; }
+.vb .t.active .lab { color: var(--ink); }
+.vb .t.hov .dot { transform: scale(2); opacity: 1; }
+.hl .vb .t.marked .dot { box-shadow: 0 0 0 2.5px var(--hl); }
+.hl .vb .t.active .dot { box-shadow: none; }
+
+/* ===== C — Valence band ===== */
+.vc .band { left: 36px; width: 3px; top: 0; bottom: 0; border-radius: 2px; opacity: 0.8; }
+.vc .maj { left: 0; height: 0; display: flex; align-items: center; pointer-events: none; }
+.vc .maj .lab { width: 24px; }
+.vc .maj i { display: block; width: 11px; height: 1px; background: var(--line-2); margin-left: 7px; }
+.vc .mk { left: 42px; width: 6px; height: 1px; margin-top: -0.5px; background: var(--ink); opacity: 0.75; pointer-events: none; }
+.hl .vc .mk { width: 9px; height: 3px; margin-top: -1.5px; background: var(--hl); opacity: 1; border-radius: 1px 3px 1px 3px; }
+.vc .notch { left: 0; height: 0; display: flex; align-items: center; transition: top 120ms ease; pointer-events: none; }
+.vc .notch .lab { width: 24px; color: var(--ink); }
+.vc .notch b { width: 0; height: 0; border: 4px solid transparent; border-left: 5px solid var(--ink); margin-left: 3px; }
+.vc .notch i { display: block; width: 12px; height: 2px; background: var(--ink); margin-left: -1px; }
+.vc .cross { left: 0; height: 0; display: none; align-items: center; pointer-events: none; }
+.vc .cross .lab { width: 24px; color: var(--ink); background: var(--bg); }
+.vc .cross i { display: block; width: 26px; height: 1px; background: var(--ink); margin-left: 8px; }
+.vc.hovering .cross { display: flex; }
+.vc.hovering .notch .lab, .vc .maj.near .lab { visibility: hidden; }
+.vc.hovering .notch { opacity: 0.45; }
+
+/* ===== D — Silhouette ===== */
+.vd .lab { width: 26px; }
+.vd .t { height: 4px; margin-top: -2px; }
+.vd .bar { margin-left: 6px; height: 1px; opacity: 0.6; transition: opacity 120ms, height 120ms; }
+.vd .t.major .bar { opacity: 0.9; }
+.vd .t.active .bar { background: var(--ink); height: 2px; opacity: 1; }
+.vd .t.active .lab { color: var(--ink); }
+.vd .t.hov .bar { height: 2px; opacity: 1; }
+.vd .t .md { width: 2px; height: 2px; border-radius: 50%; background: var(--ink); margin-left: 3px; visibility: hidden; }
+.vd .t.marked .md { visibility: visible; }
+.hl .vd .t .md { width: 6px; height: 3px; border-radius: 1px 3px 1px 2px; background: var(--hl); }
+
+/* ===== E — Your marks ===== */
+.ve .lab { width: 26px; }
+.ve .bar { margin-left: 6px; height: 1px; width: 5px; background: var(--line-2); transition: width 120ms, background 120ms; }
+.ve .t.major .bar { width: 10px; background: #bdb9aa; }
+.ve .t.active .bar { width: 16px; height: 2px; background: var(--ink); }
+.ve .t.active .lab { color: var(--ink); }
+.ve .t.hov .bar { width: 22px; background: var(--ink); }
+.ve .pin { left: 52px; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; transition: transform 120ms; pointer-events: none; }
+.ve .pin.good { background: var(--good); } .ve .pin.fine { background: var(--fine); } .ve .pin.bad { background: var(--bad); }
+.ve .pin.hov { transform: scale(1.8); box-shadow: 0 0 0 1px var(--bg); z-index: 2; }
+.hl .ve .pin { box-shadow: 0 0 0 2.5px var(--hl); }
+
+/* ===== F — Slide rule ===== */
+.vf .axis { left: 26px; top: 0; bottom: 0; width: 1px; background: var(--line-2); }
+.vf .t { left: auto; right: calc(100% - 26px); flex-direction: row; }
+.vf .bar { height: 1px; width: 5px; opacity: 0.6; }
+.vf .t.major .bar { width: 10px; opacity: 0.9; }
+.vf .t.active .bar { background: var(--ink); width: 12px; height: 2px; opacity: 1; }
+.vf .t.hov .bar { width: 16px; height: 2px; opacity: 1; }
+.vf .t.marked::before { content: ""; width: 3px; height: 3px; border-radius: 50%; background: var(--ink); margin-right: 3px; }
+.hl .vf .t.marked::before { width: 7px; height: 4px; border-radius: 1px 3px 1px 3px; background: var(--hl); }
+.vf .rl { left: 32px; height: 0; display: flex; align-items: center; pointer-events: none; }
+.vf .rl .lab { text-align: left; }
+.vf .rl.active .lab { color: var(--ink); }
+.vf .win {
+  left: 6px; width: 26px;
+  border: 1px solid rgba(31, 30, 29, 0.55);
+  border-radius: 3px;
+  background: rgba(31, 30, 29, 0.035);
+  cursor: grab;
+  transition: top 80ms linear;
+}
+.vf .win::after { content: ""; position: absolute; left: -4px; right: -4px; top: var(--al, 50%); height: 1px; background: var(--ink); }
+.vf .win.drag { cursor: grabbing; transition: none; }
+.hl .vf .win {
+  border: none;
+  background: linear-gradient(95deg, rgba(255,225,77,0.55), var(--hl) 12%, var(--hl-soft) 55%, var(--hl) 88%, rgba(255,225,77,0.5));
+  mix-blend-mode: multiply;
+  border-radius: 3px 8px 2px 9px / 6px 3px 7px 3px;
+}
+
+/* ===== G — 5,000 ===== */
+.vg .strip { left: 40px; width: 2px; top: 0; bottom: 0; opacity: 0.8; }
+.vg .t .lab { width: 30px; }
+.vg .bar { margin-left: 4px; height: 1px; width: 4px; background: var(--line-2); }
+.vg .t.major .bar { width: 8px; background: #bdb9aa; }
+.vg .mk { left: 45px; width: 6px; height: 1px; background: var(--ink); opacity: 0.55; pointer-events: none; }
+.hl .vg .mk { background: #f2c500; opacity: 0.8; width: 8px; }
+.vg .notch { left: 0; height: 0; display: flex; align-items: center; pointer-events: none; transition: top 100ms; }
+.vg .notch .lab { width: 30px; color: var(--ink); background: var(--bg); }
+.vg .notch i { display: block; width: 16px; height: 2px; background: var(--ink); margin-left: 3px; }
+.vg .cross { left: 0; height: 0; display: none; align-items: center; pointer-events: none; }
+.vg .cross .lab { width: 30px; color: var(--ink); background: var(--bg); font-weight: 500; }
+.vg .cross i { display: block; width: 30px; height: 1px; background: var(--ink); margin-left: 3px; }
+.vg.hovering .cross { display: flex; }
+.vg.hovering .notch .lab { visibility: hidden; }
+.vg.hovering .notch { opacity: 0.45; }
+.vg .t.near .lab { visibility: hidden; }
+
+/* ===== H — Score dial ===== */
+.vh .lab { width: 22px; }
+.vh .bar { margin-left: 6px; height: 1px; width: 6px; opacity: 0.6; transition: width 120ms; }
+.vh .t.major .bar { width: 14px; opacity: 0.95; }
+.vh .t.active .bar { background: var(--ink); height: 2px; opacity: 1; width: 18px; }
+.vh .t.active .lab { color: var(--ink); }
+.vh .t.hov .bar { width: 26px; height: 2px; opacity: 1; }
+.vh .rk-tick { left: 66px; width: 3px; height: 1px; background: var(--line); pointer-events: none; }
+.vh .t.marked::after { content: ""; position: absolute; left: 56px; width: 3px; height: 3px; border-radius: 50%; background: var(--ink); }
+.hl .vh .t.marked::after { width: 8px; height: 4px; border-radius: 2px 4px 2px 5px; background: var(--hl); left: 54px; }
+.vh .t .cnt { margin-left: 6px; font-size: 10px; color: var(--muted); opacity: 0; transition: opacity 120ms; }
+.vh .t.hov .cnt { opacity: 1; }
+
+footer { max-width: 1240px; margin: 0 auto; padding: 30px 32px 80px; color: var(--muted); font-size: 15px; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Spectrum rail — variations</h1>
+  <p>Eight styles for the rail pinned to the left of a ranked list. Each panel is live: scroll the list and the active mark follows; hover the rail for a peek; click to jump. Left column is the app as it is today, right column is the highlighter experiment.</p>
+  <p class="legend">Valence <span class="sw good"></span>good <span class="sw fine"></span>fine <span class="sw bad"></span>bad &nbsp;·&nbsp; <b>Marked</b> = ranges containing something you have rated &nbsp;·&nbsp; Highlighter accent <span class="sw hl"></span></p>
+</header>
+<main id="root"></main>
+<footer>Sample data: 520 experiences (G uses 5,000), seeded and deterministic. Scores fall 10 → 0, 45% good · 35% fine · 20% bad, roughly 1 in 13 marked as rated by you (1 in 33 in G).</footer>
+
+<script>
+"use strict";
+
+/* ---------------- data ---------------- */
+function mulberry32(seed) {
+  return function () {
+    seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const GOOD = [
+  "Getting engaged", "Holding your newborn for the first time", "Finding cash in an old jacket pocket", "Seeing the ocean for the first time",
+  "A stranger paying for your coffee", "Watching a total solar eclipse", "Your dog greeting you at the door", "Getting the job offer",
+  "Falling asleep to rain on the roof", "Laughing until you cry", "Swimming in a lake at dusk", "Hearing your song come on in a shop",
+  "The first warm day of spring", "Finishing a marathon", "Seeing the northern lights", "Reading a book you can't put down",
+  "Cooking a meal that actually works", "Fresh sheets on a Sunday", "Getting a handwritten letter", "Making a new best friend",
+  "Being told you were missed", "Watching the sun rise from a mountain", "A perfect parallel park", "Your team winning in overtime",
+  "Hugging someone at the airport arrivals gate", "Learning to ride a bike", "Moving into your first apartment", "A long dinner with old friends",
+  "Snow day as a kid", "Graduating", "Being forgiven", "Slow dancing at a wedding", "Finding a four-leaf clover",
+  "Paying off a debt", "Hearing a baby laugh", "Biting into a ripe peach", "Catching a wave", "A nap with no alarm",
+  "Stargazing in the desert", "Your plant flowering", "Getting a puppy", "Being picked first", "Kissing someone for the first time",
+  "A clean bill of health", "Seeing your parents proud", "Fixing something yourself", "Getting the last slice", "Nailing a speech",
+  "Coming home after a long trip", "An unexpected day off", "A really good hug", "Finding the perfect gift", "Writing something you're proud of",
+  "Your kid's first word", "Walking out of a hard exam knowing you passed", "Watching fireworks over water", "Getting a tattoo you still love",
+  "Being recognised by an old teacher", "Eating street food at midnight", "Finishing a jigsaw puzzle"
+];
+const FINE = [
+  "Waiting at the DMV", "Doing laundry", "A Tuesday afternoon", "Grocery shopping", "Small talk in an elevator", "Filing taxes on time",
+  "A layover in a nice airport", "Reorganising a closet", "Commuting with a good podcast", "Assembling flat-pack furniture",
+  "Getting a haircut", "A video call that ends early", "Eating leftovers", "Watching a forgettable movie", "Mowing the lawn",
+  "Sitting in a waiting room", "Washing the dishes", "Updating your phone", "Losing a board game", "A lukewarm first date",
+  "Walking the long way home", "Moving desks at work", "An okay sandwich", "Renewing a passport", "Going to the dentist for a cleaning",
+  "A rainy weekend indoors", "Refilling a prescription", "Learning a spreadsheet trick", "Folding fitted sheets", "Waiting for a package",
+  "Jury duty", "A group project", "Cleaning out the fridge", "A team offsite", "Taking the stairs", "Hearing a decent cover band",
+  "Driving through the flats", "Unpacking after a trip", "A neighbour's barbecue", "Watching paint dry, literally", "Brushing your teeth",
+  "A slow Wi-Fi afternoon", "Parallel parking on the third try", "An office birthday cake", "Reading the terms and conditions",
+  "Sorting the recycling", "A late train", "Sharing an armrest", "Eating plain rice", "Being put on hold"
+];
+const BAD = [
+  "Stepping on a Lego barefoot", "Missing the bus by seconds", "Stubbing your toe", "Getting dumped by text", "Losing your keys",
+  "A paper cut", "Food poisoning", "Burning your tongue on coffee", "Your phone dying mid-call", "Getting a parking ticket",
+  "Spilling coffee on a white shirt", "Being stood up", "A flat tire in the rain", "Losing a file you didn't save", "Waking up late for a flight",
+  "Brain freeze", "A splinter you can't get out", "Getting lost without signal", "Locking yourself out", "Hearing bad news by voicemail",
+  "Biting your cheek", "Stepping in a puddle with socks on", "A broken bone", "Being laughed at", "Saying goodbye at a funeral",
+  "Getting laid off", "A car alarm at 4 a.m.", "Dropping your phone on your face", "Being ghosted", "Losing a pet",
+  "Forgetting someone's name mid-introduction", "A migraine", "Watching your team lose the final", "Shampoo in your eyes", "Hitting your funny bone"
+];
+const MODS = [
+  " for the first time", " in the rain", " at 3 a.m.", " on a Tuesday", " abroad", " as a kid", " with your dad", " on your birthday",
+  " in winter", " in front of everyone", " alone", " again, years later", " on vacation", " at a wedding", " in a new city",
+  " with your grandmother", " on a Monday morning", " during exams", " with your best friend", " in the summer"
+];
+
+function titlesFor(pool, n, rand, unique) {
+  const out = [];
+  const base = pool.slice();
+  shuffle(base, rand);
+  out.push(...base.slice(0, n));
+  const combos = [];
+  for (const b of pool) for (const m of MODS) if (!b.toLowerCase().includes(m.trim().split(" ").pop().toLowerCase())) combos.push(b + m);
+  shuffle(combos, rand);
+  let i = 0;
+  while (out.length < n) {
+    if (i >= combos.length) {
+      if (unique) throw new Error("ran out of unique titles");
+      i = 0; shuffle(combos, rand);
+    }
+    out.push(combos[i++]);
+  }
+  return shuffle(out, rand);
+}
+function shuffle(a, rand) {
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+// Scores fall piecewise: good 10 → 6.7 over 45%, fine 6.7 → 3.4 over 35%, bad 3.4 → 0 over 20%.
+function makeData(n, nMarked, seed) {
+  const rand = mulberry32(seed);
+  const nGood = Math.round(n * 0.45), nFine = Math.round(n * 0.35), nBad = n - nGood - nFine;
+  const unique = n <= 1000;
+  const titles = [
+    ...titlesFor(GOOD, nGood, rand, unique),
+    ...titlesFor(FINE, nFine, rand, unique),
+    ...titlesFor(BAD, nBad, rand, unique),
+  ];
+  const rows = titles.map((title, i) => {
+    let valence, score;
+    if (i < nGood) { valence = "good"; score = 10 - 3.3 * (i / (nGood - 1)); }
+    else if (i < nGood + nFine) { valence = "fine"; score = 6.6 - 3.2 * ((i - nGood) / (nFine - 1)); }
+    else { valence = "bad"; score = 3.3 - 3.3 * ((i - nGood - nFine) / (nBad - 1)); }
+    return { rank: i + 1, title, valence, score: Math.round(score * 10) / 10, marked: false };
+  });
+  const picks = shuffle(rows.map((_, i) => i), rand).slice(0, nMarked);
+  for (const i of picks) rows[i].marked = true;
+  return rows;
+}
+
+const STD = makeData(520, 40, 20261029);
+const BIG = makeData(5000, 150, 777);
+
+/* ---------------- helpers ---------------- */
+const ROW_H = 32;
+const ACTIVE_LINE = 0.35;
+const PAD = 14;
+const PANEL_H = 360;
+const RAIL_H = PANEL_H - 2 * PAD;
+const fmt = (n) => n.toLocaleString("en-US");
+const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+function el(cls, html, parent) {
+  const d = document.createElement("div");
+  d.className = cls;
+  if (html) d.innerHTML = html;
+  if (parent) parent.appendChild(d);
+  return d;
+}
+
+// Same algorithm as web/spectrum.tsx: round-numbered runs of ranks, at most maxTicks.
+function tickStep(total, maxTicks) {
+  for (let magnitude = 1; ; magnitude *= 10) {
+    for (const m of [1, 2, 5]) {
+      const step = m * magnitude;
+      if (Math.ceil(total / step) + 1 <= maxTicks) return step;
+    }
+  }
+}
+function ticksFor(rows, maxTicks = 60, majorEvery = 5) {
+  const step = tickStep(rows.length, maxTicks);
+  const starts = [1];
+  for (let r = step; r <= rows.length; r += step) if (r > 1) starts.push(r);
+  return starts.map((start, i) => {
+    const end = (starts[i + 1] ?? rows.length + 1) - 1;
+    const run = rows.slice(start - 1, end);
+    return {
+      start, end,
+      row: rows[start - 1],
+      label: start === 1 || start % (majorEvery * step) === 0 ? start : null,
+      marked: run.some((r) => r.marked),
+      mean: run.reduce((s, r) => s + r.score, 0) / run.length,
+    };
+  });
+}
+function tickAt(ticks, rank) {
+  let t = ticks[0];
+  for (const x of ticks) { if (x.start <= rank) t = x; else break; }
+  return t;
+}
+function nearestTick(ticks, c, py) {
+  let best = ticks[0], d = Infinity;
+  for (const t of ticks) { const dd = Math.abs(c.y(t.start) - py); if (dd < d) { d = dd; best = t; } }
+  return best;
+}
+// Vertical gradient with hard stops between contiguous valence runs.
+function valenceGradient(rows) {
+  const col = { good: "var(--good)", fine: "var(--fine)", bad: "var(--bad)" };
+  const stops = [];
+  let runStart = 0;
+  for (let i = 1; i <= rows.length; i++) {
+    if (i === rows.length || rows[i].valence !== rows[runStart].valence) {
+      const a = (runStart / rows.length) * 100, b = (i / rows.length) * 100;
+      stops.push(`${col[rows[runStart].valence]} ${a}%`, `${col[rows[runStart].valence]} ${b}%`);
+      runStart = i;
+    }
+  }
+  return `linear-gradient(to bottom, ${stops.join(", ")})`;
+}
+// Builds tick rows with a label and a bar; returns a map start → element.
+function tickEls(c, ticks, inner) {
+  const map = new Map();
+  for (const t of ticks) {
+    const e = el(`t ${t.row.valence}${t.label !== null ? " major" : ""}${t.marked ? " marked" : ""}`, inner(t), c.rail);
+    e.style.top = c.y(t.start) + "px";
+    map.set(t.start, e);
+  }
+  return map;
+}
+function toggleOne(map, prevKey, key, cls) {
+  if (prevKey !== null && map.has(prevKey)) map.get(prevKey).classList.remove(cls);
+  if (key !== null && map.has(key)) map.get(key).classList.add(cls);
+}
+
+/* ---------------- variations ---------------- */
+const VARIATIONS = [
+  {
+    letter: "A", name: "The dial", cls: "va", rw: 76, swipe: [0, 64],
+    note: "Today's rail. Precise and quiet, labels land on round numbers; but ticks are 10-rank buckets, the marked dots are tiny and pile up, and the active bar is only a few pixels different from a hovered one.",
+    build(c) {
+      const ticks = ticksFor(c.rows);
+      const map = tickEls(c, ticks, (t) => `<span class="lab">${t.label ?? ""}</span><span class="bar"></span>`);
+      let act = null, hov = null;
+      return {
+        snap: (py) => nearestTick(ticks, c, py).start,
+        active(r) { const t = tickAt(ticks, r).start; toggleOne(map, act, t, "active"); act = t; return t; },
+        hover(r) { toggleOne(map, hov, r, "hov"); hov = r; },
+      };
+    },
+  },
+  {
+    letter: "B", name: "Beads", cls: "vb", rw: 64, swipe: [28, 26],
+    note: "Dots instead of ticks — reads like a rosary or a watch's minute track. Softer and friendlier than hairlines, marked beads get a ring so no extra column is needed. Weaker: dots lose the ruler precision, and the rings crowd when most ranges are marked.",
+    build(c) {
+      const ticks = ticksFor(c.rows);
+      const map = tickEls(c, ticks, (t) => `<span class="lab">${t.label ?? ""}</span><span class="slot"><span class="dot"></span></span>`);
+      let act = null, hov = null;
+      return {
+        snap: (py) => nearestTick(ticks, c, py).start,
+        active(r) { const t = tickAt(ticks, r).start; toggleOne(map, act, t, "active"); act = t; return t; },
+        hover(r) { toggleOne(map, hov, r, "hov"); hov = r; },
+      };
+    },
+  },
+  {
+    letter: "C", name: "Valence band", cls: "vc", rw: 62, swipe: [26, 28],
+    note: "One continuous hairline-thick bar split into good / fine / bad, a notch for where you are, marks at the exact rank of each thing you rated. Hover is continuous (any rank, not buckets). Shows the proportions at a glance; loses per-bucket texture and needs the readout to be precise.",
+    build(c) {
+      const band = el("band", "", c.rail);
+      band.style.background = valenceGradient(c.rows);
+      const ticks = ticksFor(c.rows).filter((t) => t.label !== null);
+      const majs = ticks.map((t) => {
+        const m = el("maj", `<span class="lab">${t.label}</span><i></i>`, c.rail);
+        m.style.top = c.y(t.start) + "px";
+        return { t, m };
+      });
+      for (const r of c.rows) if (r.marked) el("mk", "", c.rail).style.top = c.y(r.rank) + "px";
+      const notch = el("notch", `<span class="lab"></span><b></b><i></i>`, c.rail);
+      const cross = el("cross", `<span class="lab"></span><i></i>`, c.rail);
+      let act = 1;
+      const hideNear = (r) => { for (const { t, m } of majs) m.classList.toggle("near", Math.abs(c.y(t.start) - c.y(r)) < 11); };
+      return {
+        snap: (py) => c.rankAt(py),
+        active(r) {
+          act = r;
+          notch.style.top = c.y(r) + "px";
+          notch.firstChild.textContent = r;
+          if (!c.panel.classList.contains("hovering")) hideNear(r);
+          return r;
+        },
+        hover(r) {
+          if (r === null) { c.panel.classList.remove("hovering"); hideNear(act); return; }
+          c.panel.classList.add("hovering");
+          cross.style.top = c.y(r) + "px";
+          cross.firstChild.textContent = r;
+          hideNear(r);
+        },
+      };
+    },
+  },
+  {
+    letter: "D", name: "Silhouette", cls: "vd", rw: 84, swipe: [0, 72],
+    note: "Tick length is the average score of that run, so the rail itself draws the shape of the spectrum — where the cliff between good and bad is, how long the plateau of 'fine' runs. Twice the tick density of the dial. Busier at rest, and the length no longer means 'major/minor', so labels carry that alone.",
+    build(c) {
+      const ticks = ticksFor(c.rows, 110, 10);
+      const map = tickEls(c, ticks, (t) => `<span class="lab">${t.label ?? ""}</span><span class="bar" style="width:${(2 + (t.mean / 10) * 34).toFixed(1)}px"></span><span class="md"></span>`);
+      let act = null, hov = null;
+      return {
+        snap: (py) => nearestTick(ticks, c, py).start,
+        active(r) { const t = tickAt(ticks, r).start; toggleOne(map, act, t, "active"); act = t; return t; },
+        hover(r) { toggleOne(map, hov, r, "hov"); hov = r; },
+      };
+    },
+  },
+  {
+    letter: "E", name: "Your marks", cls: "ve", rw: 64, swipe: [0, 60],
+    note: "The ruler goes neutral grey; the only colour on it is a dot for each thing you rated, at its exact rank, tinted by valence. On the global page this turns the rail into 'where do I sit in everyone's ranking'. Hover snaps to your dots when close. Loses the valence shape of the whole list; on a profile (everything is yours) it needs the dial instead.",
+    build(c) {
+      const ticks = ticksFor(c.rows);
+      const map = tickEls(c, ticks, (t) => `<span class="lab">${t.label ?? ""}</span><span class="bar"></span>`);
+      const pins = new Map();
+      for (const r of c.rows) if (r.marked) {
+        const p = el(`pin ${r.valence}`, "", c.rail);
+        p.style.top = c.y(r.rank) + "px";
+        pins.set(r.rank, p);
+      }
+      let act = null, hov = null;
+      return {
+        snap(py) {
+          let best = null, d = 5;
+          for (const rank of pins.keys()) { const dd = Math.abs(c.y(rank) - py); if (dd < d) { d = dd; best = rank; } }
+          return best ?? nearestTick(ticks, c, py).start;
+        },
+        active(r) { const t = tickAt(ticks, r).start; toggleOne(map, act, t, "active"); act = t; return t; },
+        hover(r) {
+          if (hov !== null) { map.get(hov)?.classList.remove("hov"); pins.get(hov)?.classList.remove("hov"); }
+          if (r !== null) { (pins.get(r) ?? map.get(r))?.classList.add("hov"); }
+          hov = r;
+        },
+      };
+    },
+  },
+  {
+    letter: "F", name: "Slide rule", cls: "vf", rw: 76, swipe: null,
+    note: "Labels on the right, ticks hang off a hairline axis, and a cursor window frames exactly the rows on screen — drag it to scroll. The most 'instrument'-like and the only one that shows how much you can see. Weaker: at 520 items the window is only a few pixels tall, and labels-right sit closer to the list text.",
+    build(c) {
+      el("axis", "", c.rail);
+      const ticks = ticksFor(c.rows);
+      const map = new Map(), labs = new Map();
+      for (const t of ticks) {
+        const e = el(`t ${t.row.valence}${t.label !== null ? " major" : ""}${t.marked ? " marked" : ""}`, `<span class="bar"></span>`, c.rail);
+        e.style.top = c.y(t.start) + "px";
+        map.set(t.start, e);
+        if (t.label !== null) {
+          const l = el("rl", `<span class="lab">${t.label}</span>`, c.rail);
+          l.style.top = c.y(t.start) + "px";
+          labs.set(t.start, l);
+        }
+      }
+      const win = el("win", "", c.rail);
+      let act = null, hov = null, actLab = null;
+      // Drag the window to scroll the list.
+      let drag = null;
+      win.addEventListener("pointerdown", (e) => {
+        e.stopPropagation();
+        win.setPointerCapture(e.pointerId);
+        drag = { y0: e.clientY, top0: c.list.scrollTop, moved: false };
+        win.classList.add("drag");
+      });
+      win.addEventListener("pointermove", (e) => {
+        if (!drag) return;
+        e.stopPropagation();
+        const dy = e.clientY - drag.y0;
+        if (Math.abs(dy) > 2) drag.moved = true;
+        c.list.scrollTop = drag.top0 + (dy / RAIL_H) * (c.N - 1) * ROW_H;
+      });
+      const end = (e) => {
+        if (!drag) return;
+        win.classList.remove("drag");
+        if (drag.moved) c.suppressClick();
+        drag = null;
+      };
+      win.addEventListener("pointerup", end);
+      win.addEventListener("pointercancel", end);
+      return {
+        snap: (py) => nearestTick(ticks, c, py).start,
+        active(r, first, last) {
+          const t = tickAt(ticks, r).start;
+          toggleOne(map, act, t, "active"); act = t;
+          const lt = ticks.filter((x) => x.label !== null && x.start <= r).pop().start;
+          toggleOne(labs, actLab, lt, "active"); actLab = lt;
+          const top = c.y(first), h = Math.max(12, c.y(last) - top);
+          const mid = top - (h - (c.y(last) - top)) / 2; // keep a min-height window centred on the visible range
+          win.style.top = mid + "px";
+          win.style.height = h + "px";
+          win.style.setProperty("--al", clamp(c.y(r) - mid, 0, h) + "px");
+          return null;
+        },
+        hover(r) { toggleOne(map, hov, r, "hov"); hov = r; },
+      };
+    },
+  },
+  {
+    letter: "G", name: "Built for 5,000", cls: "vg", big: true, rw: 70, swipe: [0, 58],
+    note: "At 5,000 rows each pixel is ~15 ranks, so buckets stop meaning anything. Continuous scrub with a live rank readout, a 2px valence strip, ~150 rated marks drawn as a faint density texture, and a peek that shows the neighbours (it's a loupe). Scales to any length; at rest it's the least 'watch-like'.",
+    build(c) {
+      const strip = el("strip", "", c.rail);
+      strip.style.background = valenceGradient(c.rows);
+      const ticks = ticksFor(c.rows, 60, 5);
+      const map = tickEls(c, ticks, (t) => `<span class="lab">${t.label !== null ? fmt(t.label) : ""}</span><span class="bar"></span>`);
+      for (const r of c.rows) if (r.marked) el("mk", "", c.rail).style.top = c.y(r.rank) + "px";
+      const notch = el("notch", `<span class="lab"></span><i></i>`, c.rail);
+      const cross = el("cross", `<span class="lab"></span><i></i>`, c.rail);
+      let act = 1;
+      const hideNear = (r) => { for (const t of ticks) if (t.label !== null) map.get(t.start).classList.toggle("near", Math.abs(c.y(t.start) - c.y(r)) < 11); };
+      return {
+        snap: (py) => c.rankAt(py),
+        active(r) {
+          act = r;
+          notch.style.top = c.y(r) + "px";
+          notch.firstChild.textContent = fmt(r);
+          if (!c.panel.classList.contains("hovering")) hideNear(r);
+          return r;
+        },
+        hover(r) {
+          if (r === null) { c.panel.classList.remove("hovering"); hideNear(act); return; }
+          c.panel.classList.add("hovering");
+          cross.style.top = c.y(r) + "px";
+          cross.firstChild.textContent = fmt(r);
+          hideNear(r);
+        },
+        extra(r) {
+          let h = "";
+          for (let k = Math.max(1, r - 2); k <= Math.min(c.N, r + 2); k++) {
+            if (k === r) continue;
+            const x = c.rows[k - 1];
+            h += `<div><span>#${fmt(k)}</span><span>${esc(x.title)}</span><span class="score ${x.valence}">${x.score.toFixed(1)}</span></div>`;
+          }
+          return h;
+        },
+      };
+    },
+  },
+  {
+    letter: "H", name: "Score dial", cls: "vh", rw: 72, swipe: [0, 52],
+    note: "Same dial, but the labels are scores (10, 9, … 0) placed where each score begins, with half-points as minor ticks. Answers 'where do my sevens start?' and makes uneven scoring visible (the bad end is compressed). Loses rank labels, and real data with clumped scores will collide.",
+    build(c) {
+      const marks = [];
+      for (let s = 100; s >= 0; s -= 5) {
+        const idx = c.rows.findIndex((r) => r.score <= s / 10);
+        if (idx < 0) continue;
+        if (marks.length && marks[marks.length - 1].start === idx + 1) continue;
+        marks.push({ start: idx + 1, row: c.rows[idx], label: s % 10 === 0 ? s / 10 : null });
+      }
+      marks.forEach((m, i) => {
+        m.end = (marks[i + 1]?.start ?? c.N + 1) - 1;
+        m.marked = c.rows.slice(m.start - 1, m.end).some((r) => r.marked);
+      });
+      const map = tickEls(c, marks, (t) => `<span class="lab">${t.label ?? ""}</span><span class="bar"></span><span class="cnt">${t.end - t.start + 1}</span>`);
+      for (const t of ticksFor(c.rows)) el("rk-tick", "", c.rail).style.top = c.y(t.start) + "px";
+      let act = null, hov = null;
+      return {
+        snap: (py) => nearestTick(marks, c, py).start,
+        active(r) { const t = tickAt(marks, r).start; toggleOne(map, act, t, "active"); act = t; return t; },
+        hover(r) { toggleOne(map, hov, r, "hov"); hov = r; },
+      };
+    },
+  },
+];
+
+/* ---------------- engine ---------------- */
+const listCache = new Map();
+function listHtml(rows) {
+  if (!listCache.has(rows)) {
+    listCache.set(rows, rows.map((r) =>
+      `<li><span class="rk">${fmt(r.rank)}</span><span class="tt">${esc(r.title)}${r.marked ? '<span class="mark" title="You\'ve rated this"></span>' : ""}</span><span class="score ${r.valence}">${r.score.toFixed(1)}</span></li>`
+    ).join(""));
+  }
+  return listCache.get(rows);
+}
+
+function mountPanel(panel, v) {
+  const rows = v.big ? BIG : STD;
+  const N = rows.length;
+  panel.classList.add(v.cls);
+  panel.style.setProperty("--rw", v.rw + "px");
+  panel.innerHTML = `<div class="rail"></div><div class="list"><ol>${listHtml(rows)}</ol></div>
+    <div class="peek"><div class="pk-main"><span class="pk-rank"></span><span class="pk-title"></span><span class="pk-score score"></span></div><div class="pk-extra"></div></div>`;
+  const rail = panel.querySelector(".rail");
+  const list = panel.querySelector(".list");
+  const peek = panel.querySelector(".peek");
+  const items = list.querySelectorAll("li");
+
+  let swipe = null;
+  if (v.swipe) {
+    swipe = el("swipe", "", rail);
+    swipe.style.setProperty("--sl", v.swipe[0] + "px");
+    swipe.style.setProperty("--sw", v.swipe[1] + "px");
+  }
+
+  let clickBlocked = false;
+  const c = {
+    rail, list, panel, rows, N, H: RAIL_H,
+    y: (r) => ((r - 1) / (N - 1)) * RAIL_H,
+    rankAt: (py) => clamp(Math.round((py / RAIL_H) * (N - 1)) + 1, 1, N),
+    suppressClick() { clickBlocked = true; setTimeout(() => (clickBlocked = false), 0); },
+  };
+  const api = v.build(c);
+  if (!api.snap || !api.active || !api.hover) throw new Error(`variation ${v.letter} is missing an api method`);
+
+  const scrollForRank = (r) => (r - 1) * ROW_H - list.clientHeight * ACTIVE_LINE + 1;
+
+  function update() {
+    const ch = list.clientHeight;
+    const st = list.scrollTop;
+    const atBottom = st + ch >= list.scrollHeight - 2;
+    const active = atBottom ? N : clamp(Math.floor((st + ch * ACTIVE_LINE) / ROW_H) + 1, 1, N);
+    const first = clamp(Math.floor(st / ROW_H) + 1, 1, N);
+    const last = clamp(Math.ceil((st + ch) / ROW_H), 1, N);
+    const swipeRank = api.active(active, first, last);
+    if (swipe && swipeRank !== null) swipe.style.top = c.y(swipeRank) + "px";
+  }
+  let raf = 0;
+  list.addEventListener("scroll", () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; update(); }); }, { passive: true });
+
+  let hovered = null;
+  const pyOf = (e) => e.clientY - rail.getBoundingClientRect().top;
+  function showPeek(r) {
+    const row = rows[r - 1];
+    peek.querySelector(".pk-rank").textContent = "#" + fmt(r);
+    peek.querySelector(".pk-title").textContent = row.title;
+    const sc = peek.querySelector(".pk-score");
+    sc.textContent = row.score.toFixed(1);
+    sc.className = "pk-score score " + row.valence;
+    peek.querySelector(".pk-extra").innerHTML = api.extra ? api.extra(r) : "";
+    peek.classList.add("on");
+    const h = peek.offsetHeight;
+    peek.style.top = clamp(PAD + c.y(r), h / 2 + 6, PANEL_H - h / 2 - 6) + "px";
+  }
+  rail.addEventListener("pointermove", (e) => {
+    const r = api.snap(clamp(pyOf(e), 0, RAIL_H));
+    if (r === hovered) return;
+    api.hover(null);
+    api.hover(r);
+    hovered = r;
+    showPeek(r);
+  });
+  rail.addEventListener("pointerleave", () => {
+    api.hover(null);
+    hovered = null;
+    peek.classList.remove("on");
+  });
+  rail.addEventListener("click", (e) => {
+    if (clickBlocked) return;
+    const r = api.snap(clamp(pyOf(e), 0, RAIL_H));
+    list.scrollTo({ top: scrollForRank(r), behavior: "smooth" });
+    const li = items[r - 1];
+    li.classList.add("flash");
+    setTimeout(() => li.classList.remove("flash"), 900);
+  });
+
+  list.scrollTop = scrollForRank(v.big ? 1240 : 131);
+  update();
+}
+
+const root = document.getElementById("root");
+for (const v of VARIATIONS) {
+  const s = document.createElement("section");
+  s.className = "variation";
+  s.innerHTML = `<h2><span class="letter">${v.letter}</span>${v.name}</h2><p class="note">${v.note}</p>
+    <div class="pair">
+      <figure><figcaption>Current</figcaption><div class="panel"></div></figure>
+      <figure class="hl"><figcaption>Highlighter</figcaption><div class="panel"></div></figure>
+    </div>`;
+  root.appendChild(s);
+  for (const p of s.querySelectorAll(".panel")) mountPanel(p, v);
+}
+</script>
+</body>
+</html>
