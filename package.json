@@ -23,6 +23,8 @@
   },
   "scripts": {
     "dev": "bun --hot src/server.ts",
+    "build": "bun scripts/build-web.ts",
+    "start": "NODE_ENV=production bun src/server.ts",
     "db:migrate": "bun src/migrate.ts",
     "dump": "bun src/cli.ts",
     "eval:judge": "bun evals/judge.eval.ts",

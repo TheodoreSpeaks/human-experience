@@ -1,4 +1,4 @@
-import index from "../web/index.html";
+import { join } from "path";
 import { auth, googleEnabled, HttpError, requireUser } from "./auth";
 import {
   bucket,
@@ -17,6 +17,7 @@ import {
 import { embed, embeddingText } from "./embed";
 import { ingestDump } from "./ingest";
 import { everything, experience, feed, follow, followList, peopleLikeYou, profile, search, unfollow } from "./social";
+import { WEB_ASSETS } from "./generated/web-assets";
 import { createTranscriptionSecret } from "./transcribe";
 
 function requiredText(v: unknown, field: string): string {
@@ -29,6 +30,32 @@ function parseValence(v: unknown): Valence {
   return v as Valence;
 }
 
+// Production (Vercel) serves the frontend prebuilt by `bun run build`; Vercel can't serve HTML imports.
+// Local dev bundles it live with hot reload.
+const production = process.env.NODE_ENV === "production";
+if (production && !WEB_ASSETS) throw new Error("Frontend isn't built: run `bun run build` before starting in production");
+
+const assetResponse = (path: string) => {
+  const asset = WEB_ASSETS![path]!;
+  return new Response(asset.body, {
+    headers: {
+      "Content-Type": asset.type,
+      "Cache-Control": asset.immutable ? "public, max-age=31536000, immutable" : "no-cache",
+    },
+  });
+};
+
+// The dev page is loaded by a runtime-computed path so the production bundler never follows it.
+const index = production ? () => assetResponse("/index.html") : (await import(join(import.meta.dir, "../web/index.html"))).default;
+
+const frontend = production
+  ? Object.fromEntries(Object.keys(WEB_ASSETS!).map((path) => [path, () => assetResponse(path)]))
+  : {
+      // Read from disk per request: Bun's dev bundler keeps serving stale CSS after edits.
+      "/styles.css": () =>
+        new Response(Bun.file(join(import.meta.dir, "../web/styles.css")), { headers: { "Cache-Control": "no-store" } }),
+    };
+
 const server = Bun.serve({
   routes: {
     // Client-side routes all serve the app.
@@ -40,9 +67,7 @@ const server = Bun.serve({
     "/login": index,
     "/signup": index,
 
-    // Read from disk per request: Bun's dev bundler keeps serving stale CSS after edits.
-    "/styles.css": () =>
-      new Response(Bun.file(`${import.meta.dir}/../web/styles.css`), { headers: { "Cache-Control": "no-store" } }),
+    ...frontend,
 
     "/api/auth/*": (req) => auth.handler(req),
 
@@ -201,7 +226,7 @@ const server = Bun.serve({
     return Response.json({ error: err.message }, { status });
   },
 
-  development: { hmr: true, console: true },
+  development: production ? false : { hmr: true, console: true },
 });
 
 console.log(`listening on ${server.url}`);
